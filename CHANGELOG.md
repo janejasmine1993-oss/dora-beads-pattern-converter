@@ -4,24 +4,23 @@
 
 ### Added
 
-- 创建 `docs/11_DEPLOYMENT.md`：完整部署说明（Vercel / Netlify / GitHub 上传步骤）
-- 确认 `npm run build` 通过，构建输出目录 `dist/` 可直接部署
-- 确认项目无后端依赖、无环境变量，可纯静态部署
+- 🌐 **项目正式上线**：https://dora-beads-pattern-converter.pages.dev（Cloudflare Pages）
 - 实现 PNG 导出核心逻辑（`src/lib/export/exportPng.ts`）：格子图/色号图高清导出，含水印
 - 升级 ExportPanel：导出格子图 PNG、导出色号图 PNG 真实可用，PDF/Excel/CSV 保留为占位
+- 初始化 Git 仓库，代码托管至 GitHub：https://github.com/janejasmine1993-oss/dora-beads-pattern-converter
+- 创建 `docs/11_DEPLOYMENT.md`：完整部署说明
 
 ### Changed
 
 - `src/App.tsx`：版本号更新为 v0.2.5，ExportPanel 接口改为传 `patternData`
-- `docs/00_PROJECT_INDEX.md`：版本更新，新增部署文档索引
-- `docs/04_TASKS.md`：新增 v0.2.5 任务记录
+- `vite.config.ts`：恢复简洁配置（Cloudflare 部署在根路径，无需 base 设置）
+- `docs/11_DEPLOYMENT.md`：记录线上地址、Wrangler 部署方式、GitHub 自动部署升级指引
 
 ### Known Issues
 
-- 尚未初始化 Git 仓库（需用户确认后执行）
-- 尚未部署到 Vercel / Netlify（需用户登录操作）
 - 色卡数据仍为示例数据
 - PDF / Excel / CSV 导出未实现
+- Cloudflare Pages 目前为 Wrangler CLI 手动部署，可升级为 GitHub 自动部署
 
 ---
 

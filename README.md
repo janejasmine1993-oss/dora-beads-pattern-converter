@@ -1,6 +1,6 @@
 # 哆啦拼豆图纸转换器 (dora-beads-pattern-converter)
 
-**当前版本：v0.2.5**
+**当前版本：v0.2.5** | **线上地址：[dora-beads-pattern-converter.pages.dev](https://dora-beads-pattern-converter.pages.dev)**
 
 ## 项目简介
 
@@ -33,9 +33,13 @@ npm run dev
 
 访问 http://localhost:5173（**仅本机可用**，不是公网地址）
 
-## 如何部署上线
+## 线上地址
 
-请参考 [docs/11_DEPLOYMENT.md](docs/11_DEPLOYMENT.md)，使用 Vercel 或 Netlify 免费部署。
+**https://dora-beads-pattern-converter.pages.dev**（Cloudflare Pages）
+
+本地开发地址 `http://localhost:5173` 只在当前电脑上可用，不是公网地址。
+
+部署说明详见 [docs/11_DEPLOYMENT.md](docs/11_DEPLOYMENT.md)。
 
 ## 当前已完成功能
 
