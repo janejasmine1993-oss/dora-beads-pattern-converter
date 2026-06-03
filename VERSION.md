@@ -1,3 +1,3 @@
-Current Version: v0.2.5
-Status: Deployment Ready
+Current Version: v0.3.1
+Status: Quality Fix
 Last Updated: 2026-06-03

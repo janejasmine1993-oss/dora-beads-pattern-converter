@@ -8,13 +8,40 @@ export function calcCellSize(patternW: number, patternH: number): number {
   return Math.max(2, Math.floor(MAX_DISPLAY / Math.max(patternW, patternH)))
 }
 
+/** Light gray used as the "empty/transparent" cell background in previews. */
+const TRANSPARENT_BG = '#e8e8e8'
+
+/**
+ * Draw checkerboard-style background for the entire canvas.
+ * Two alternating light grays clearly indicate "no bead here" areas.
+ */
+function fillTransparentBackground(
+  ctx: CanvasRenderingContext2D,
+  canvasW: number,
+  canvasH: number,
+  cellSize: number
+): void {
+  const colsN = Math.ceil(canvasW / cellSize)
+  const rowsN = Math.ceil(canvasH / cellSize)
+  for (let row = 0; row < rowsN; row++) {
+    for (let col = 0; col < colsN; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#e8e8e8' : '#d8d8d8'
+      ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+    }
+  }
+}
+
 export function drawPixelTab(
   ctx: CanvasRenderingContext2D,
   rawPixels: PixelCell[],
+  width: number,
+  height: number,
   cellSize: number
 ): void {
+  fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
   ctx.imageSmoothingEnabled = false
   for (const px of rawPixels) {
+    if (px.isTransparent) continue
     ctx.fillStyle = px.hex
     ctx.fillRect(px.x * cellSize, px.y * cellSize, cellSize, cellSize)
   }
@@ -27,16 +54,19 @@ export function drawGridTab(
   height: number,
   cellSize: number
 ): void {
-  // Fill cells with matched palette color
+  // Background: checkerboard for transparent areas, filled over by palette colors
+  fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
+
+  // Fill non-transparent cells with matched palette color
   for (const cell of cells) {
+    if (cell.isTransparent) continue
     ctx.fillStyle = cell.color.hex
     ctx.fillRect(cell.col * cellSize, cell.row * cellSize, cellSize, cellSize)
   }
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)'
+  // Grid lines over everything
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)'
   ctx.lineWidth = 0.5
-
   for (let x = 0; x <= width; x++) {
     ctx.beginPath()
     ctx.moveTo(x * cellSize, 0)
@@ -61,7 +91,7 @@ export function drawColorCodeTab(
 ): void {
   drawGridTab(ctx, cells, width, height, cellSize)
 
-  if (cellSize < 10) return  // too small to render readable text
+  if (cellSize < 10) return
 
   const shortCodeMap = buildShortCodeMap(colorStats)
   const fontSize = Math.max(6, Math.floor(cellSize * 0.42))
@@ -70,6 +100,7 @@ export function drawColorCodeTab(
   ctx.textBaseline = 'middle'
 
   for (const cell of cells) {
+    if (cell.isTransparent) continue  // no label on transparent cells
     const key = `${cell.color.brand}__${cell.color.code}`
     const label = shortCodeMap.get(key) ?? '?'
     const brightness = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
@@ -92,7 +123,7 @@ export function drawStatsTab(
 
   const total = colorStats.reduce((s, c) => s + c.count, 0)
 
-  // ── Top stacked bar (proportional color distribution) ──────────────────
+  // Top stacked bar (proportional color distribution, non-transparent only)
   const barH = 36
   let x = 0
   for (const stat of colorStats) {
@@ -102,7 +133,7 @@ export function drawStatsTab(
     x += w
   }
 
-  // ── Color swatch grid ───────────────────────────────────────────────────
+  // Color swatch grid
   const shortCodeMap = buildShortCodeMap(colorStats)
   const swatchSize = 28
   const rowH = swatchSize + 32
@@ -118,14 +149,12 @@ export function drawStatsTab(
     const sx = col * 120 + 8
     const sy = gridStartY + row * rowH
 
-    // Color swatch
     ctx.fillStyle = stat.color.hex
     ctx.fillRect(sx, sy, swatchSize, swatchSize)
     ctx.strokeStyle = 'rgba(0,0,0,0.2)'
     ctx.lineWidth = 0.5
     ctx.strokeRect(sx, sy, swatchSize, swatchSize)
 
-    // Short code + count
     const key = `${stat.color.brand}__${stat.color.code}`
     const shortCode = shortCodeMap.get(key) ?? '?'
     ctx.fillStyle = '#374151'
@@ -137,3 +166,6 @@ export function drawStatsTab(
     if (col >= cols) { col = 0; row++ }
   }
 }
+
+// Keep export for unused import compatibility
+export { TRANSPARENT_BG }

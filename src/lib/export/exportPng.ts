@@ -6,7 +6,6 @@ import { getBrightness } from '../utils/color'
 
 export type PngExportMode = 'grid' | 'colorcode'
 
-/** Choose export cell size based on pattern dimensions so the file stays usable. */
 function calcExportCellSize(w: number, h: number): number {
   const maxDim = Math.max(w, h)
   if (maxDim <= 52) return 30
@@ -15,12 +14,28 @@ function calcExportCellSize(w: number, h: number): number {
   return 10
 }
 
+/** Fill export canvas with a light-gray checkerboard to indicate transparent areas. */
+function fillTransparentBackground(
+  ctx: CanvasRenderingContext2D,
+  gridW: number,
+  gridH: number,
+  cellSize: number
+): void {
+  for (let row = 0; row < gridH; row++) {
+    for (let col = 0; col < gridW; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#f0f0f0' : '#e4e4e4'
+      ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+    }
+  }
+}
+
 function drawCells(
   ctx: CanvasRenderingContext2D,
   cells: PatternCell[],
   cellSize: number
 ): void {
   for (const cell of cells) {
+    if (cell.isTransparent) continue
     ctx.fillStyle = cell.color.hex
     ctx.fillRect(cell.col * cellSize, cell.row * cellSize, cellSize, cellSize)
   }
@@ -32,9 +47,8 @@ function drawGridLines(
   gridH: number,
   cellSize: number
 ): void {
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)'
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)'
   ctx.lineWidth = 1
-
   for (let x = 0; x <= gridW; x++) {
     ctx.beginPath()
     ctx.moveTo(x * cellSize, 0)
@@ -64,6 +78,7 @@ function drawColorLabels(
   ctx.textBaseline = 'middle'
 
   for (const cell of cells) {
+    if (cell.isTransparent) continue
     const key = `${cell.color.brand}__${cell.color.code}`
     const label = shortCodeMap.get(key) ?? '?'
     const brightness = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
@@ -86,11 +101,8 @@ function drawWatermarkStrip(
   gridW: number,
   gridH: number
 ): void {
-  // Background
   ctx.fillStyle = '#f8fafc'
   ctx.fillRect(0, stripY, canvasWidth, WATERMARK_H)
-
-  // Top border
   ctx.strokeStyle = 'rgba(0,0,0,0.10)'
   ctx.lineWidth = 1
   ctx.beginPath()
@@ -99,16 +111,14 @@ function drawWatermarkStrip(
   ctx.stroke()
 
   const midY = stripY + WATERMARK_H / 2
+  const date = new Date().toISOString().slice(0, 10)
 
-  // Left: brand + dimensions
   ctx.fillStyle = 'rgba(0,0,0,0.30)'
   ctx.font = '13px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  const date = new Date().toISOString().slice(0, 10)
   ctx.fillText(`${brand} · ${gridW}×${gridH} 格 · ${date}`, 14, midY)
 
-  // Right: watermark brand name
   ctx.fillStyle = 'rgba(0,0,0,0.40)'
   ctx.font = 'bold 13px sans-serif'
   ctx.textAlign = 'right'
@@ -124,10 +134,6 @@ function triggerDownload(dataUrl: string, fileName: string): void {
   document.body.removeChild(a)
 }
 
-/**
- * Render patternData at high resolution and trigger a PNG download.
- * Always draws on a fresh offscreen canvas — never uses the preview canvas.
- */
 export function exportPatternAsPng(
   patternData: PatternData,
   brand: BrandName,
@@ -147,22 +153,25 @@ export function exportPatternAsPng(
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingEnabled = false
 
-  // White background
+  // White base for watermark strip area
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvasW, canvasH)
 
-  // Grid cells (palette colors)
+  // Checkerboard background for transparent areas within the grid
+  fillTransparentBackground(ctx, width, height, cellSize)
+
+  // Non-transparent cells in palette color
   drawCells(ctx, cells, cellSize)
 
   // Grid lines
   drawGridLines(ctx, width, height, cellSize)
 
-  // Color code labels (only for colorcode mode)
+  // Color code labels (colorcode mode, non-transparent cells only)
   if (mode === 'colorcode') {
     drawColorLabels(ctx, cells, colorStats, cellSize)
   }
 
-  // Watermark strip below the grid
+  // Watermark strip
   drawWatermarkStrip(ctx, canvasW, height * cellSize, brand, width, height)
 
   const fileName = buildFileName(brand, width, height, 'png')

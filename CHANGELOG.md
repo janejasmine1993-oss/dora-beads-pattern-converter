@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.3.1 - 2026-06-03
+
+### Fixed（图纸质量修复）
+
+- **透明背景不再变黑**：引入 `TRANSPARENT_ALPHA_THRESHOLD=32`，alpha<32 的像素标记为 `isTransparent=true`，不参与色号匹配，不显示色号标注
+- **保持原图比例**：新增 `resizeWithContain()` 实现 contain 模式，图片等比缩放居中，多余区域透明，不再强制拉伸
+- **透明边界自动裁剪**：新增 `cropTransparentBorder()`，自动检测主体 bounding box，加 5% 安全边距后裁剪，确保主体充满目标画布
+- **空白区域不计豆**：`computeColorStats` 跳过透明格子；`PatternData` 新增 `beadCount`/`transparentCount` 字段
+- **统计面板修正**：豆量统计改为显示实际用豆（非透明格子数），同时展示空白格数量
+- **Canvas 渲染修复**：像素图/格子图/色号图均先绘制棋盘格背景表示透明区域，非透明格子覆盖其上；色号图不在透明格上显示标注
+- **PNG 导出修复**：透明格导出为浅灰棋盘格，非透明格显示品牌色，不再满屏 A1
+
+### Changed
+
+- `src/types/pattern.ts`：`PixelCell` 新增 `isTransparent`；`PatternCell` 新增 `isTransparent`；`PatternData` 新增 `beadCount`/`transparentCount`；新增 `TRANSPARENT_COLOR` 常量和 `FitMode` 类型
+- `src/lib/image/resize.ts`：新增 `TRANSPARENT_ALPHA_THRESHOLD` 常量和 `resizeWithContain()`
+- `src/lib/image/crop.ts`：完整实现 `cropTransparentBorder()`
+- `src/lib/image/pixelate.ts`：提取像素时计算 `isTransparent`
+- `src/lib/utils/stats.ts`：跳过透明格子
+- `src/components/PreviewCanvas/canvasRenderer.ts`：所有 Tab 正确处理透明区域
+- `src/lib/export/exportPng.ts`：透明格显示棋盘格背景，不显示标注
+- `src/App.tsx`：管线升级为 cropTransparentBorder → resizeWithContain → extractPixels → rematchPalette；版本号 v0.3.1
+
+### Known Issues
+
+- 色卡仍为示例数据（非真实 MARD/COCO 等品牌色号），颜色还原质量受限于色卡数量
+- PDF / Excel / CSV 导出未实现
+
+---
+
 ## v0.2.5 - 2026-06-03
 
 ### Added

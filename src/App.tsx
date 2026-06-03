@@ -7,7 +7,9 @@ import { StatsPanel } from './components/StatsPanel'
 import { ExportPanel } from './components/ExportPanel'
 import type { BrandName } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
-import { loadImage, resizeImageToCanvas } from './lib/image/resize'
+import { TRANSPARENT_COLOR } from './types/pattern'
+import { loadImage, resizeWithContain } from './lib/image/resize'
+import { cropTransparentBorder } from './lib/image/crop'
 import { extractPixels } from './lib/image/pixelate'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { computeColorStats } from './lib/utils/stats'
@@ -26,7 +28,6 @@ function App() {
 
   function handleImageLoad(url: string) {
     setImageUrl(url)
-    // Clear previous result when a new image is uploaded
     setRawPixels(null)
     setPatternData(null)
     setErrorMsg(null)
@@ -35,14 +36,12 @@ function App() {
   function handleSizeChange(w: number, h: number) {
     setWidth(w)
     setHeight(h)
-    // Size changed → previous generation result is stale, clear it
     setRawPixels(null)
     setPatternData(null)
   }
 
   function handleBrandChange(newBrand: BrandName) {
     setBrand(newBrand)
-    // Re-run palette matching with new brand if we already have raw pixels
     if (rawPixels && rawPixels.length > 0) {
       rematchPalette(rawPixels, newBrand, width, height)
     }
@@ -57,14 +56,32 @@ function App() {
     const palette = getPalette(targetBrand)
     const labCache = buildLabCache(palette)
 
-    const cells: PatternCell[] = pixels.map((px) => ({
-      row: px.y,
-      col: px.x,
-      color: matchColor(px.r, px.g, px.b, palette, labCache),
-    }))
+    let transparentCount = 0
+
+    const cells: PatternCell[] = pixels.map((px) => {
+      if (px.isTransparent) {
+        transparentCount++
+        return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+      }
+      return {
+        row: px.y,
+        col: px.x,
+        isTransparent: false,
+        color: matchColor(px.r, px.g, px.b, palette, labCache),
+      }
+    })
 
     const colorStats = computeColorStats(cells)
-    setPatternData({ size: { width: w, height: h }, cells, rawPixels: pixels, colorStats })
+    const beadCount = pixels.length - transparentCount
+
+    setPatternData({
+      size: { width: w, height: h },
+      cells,
+      rawPixels: pixels,
+      colorStats,
+      beadCount,
+      transparentCount,
+    })
   }
 
   async function generatePattern() {
@@ -83,7 +100,14 @@ function App() {
 
     try {
       const img = await loadImage(imageUrl)
-      const canvas = resizeImageToCanvas(img, width, height)
+
+      // Step 1: Auto-crop transparent border (removes empty frame, preserves content)
+      const cropped = cropTransparentBorder(img)
+
+      // Step 2: Resize with contain mode (preserves aspect ratio, centers in canvas)
+      const canvas = resizeWithContain(cropped, width, height)
+
+      // Step 3: Extract pixels, marking transparent cells
       const pixels = extractPixels(canvas)
 
       setRawPixels(pixels)
@@ -98,7 +122,6 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shrink-0">
         <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
           豆
@@ -107,10 +130,9 @@ function App() {
           <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
           <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
         </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.2.5</span>
+        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.3.1</span>
       </header>
 
-      {/* Error banner */}
       {errorMsg && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-600 flex items-center justify-between shrink-0">
           <span>{errorMsg}</span>
@@ -118,10 +140,7 @@ function App() {
         </div>
       )}
 
-      {/* Three-column layout */}
       <div className="flex flex-1 overflow-hidden">
-
-        {/* Left: Upload + Settings */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
           <UploadPanel onImageLoad={handleImageLoad} />
           <SettingsPanel
@@ -134,7 +153,6 @@ function App() {
           />
         </aside>
 
-        {/* Center: Preview */}
         <main className="flex-1 overflow-hidden p-4">
           <div className="bg-white rounded-xl border border-gray-200 h-full p-4 flex flex-col">
             <PreviewCanvas
@@ -146,7 +164,6 @@ function App() {
           </div>
         </main>
 
-        {/* Right: Brand + Stats + Export */}
         <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
           <PalettePanel selectedBrand={brand} onBrandChange={handleBrandChange} />
           <StatsPanel

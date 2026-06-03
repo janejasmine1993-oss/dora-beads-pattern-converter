@@ -50,7 +50,7 @@ export function PreviewCanvas({ imageUrl, patternData }: PreviewCanvasProps) {
 
     switch (activeTab) {
       case 'pixel':
-        drawPixelTab(ctx, rawPixels, cellSize)
+        drawPixelTab(ctx, rawPixels, size.width, size.height, cellSize)
         break
       case 'grid':
         drawGridTab(ctx, cells, size.width, size.height, cellSize)

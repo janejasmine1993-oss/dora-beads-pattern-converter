@@ -13,12 +13,14 @@ export interface PixelCell {
   b: number
   a: number
   hex: string
+  isTransparent: boolean
 }
 
 export interface PatternCell {
   row: number
   col: number
   color: PaletteColor
+  isTransparent: boolean
 }
 
 export interface ColorStat {
@@ -33,7 +35,20 @@ export interface PatternData {
   cells: PatternCell[]
   rawPixels: PixelCell[]
   colorStats: ColorStat[]
+  beadCount: number       // non-transparent cells only
+  transparentCount: number
 }
+
+// Sentinel used as color placeholder for transparent cells (never rendered)
+export const TRANSPARENT_COLOR: PaletteColor = {
+  brand: '__transparent__',
+  code: '__transparent__',
+  name: '透明',
+  hex: '#ffffff',
+  rgb: [255, 255, 255],
+}
+
+export type FitMode = 'contain' | 'cover' | 'stretch'
 
 export type PreviewTab = 'original' | 'pixel' | 'grid' | 'colorcode' | 'stats'
 

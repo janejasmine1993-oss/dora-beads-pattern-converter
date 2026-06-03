@@ -1,10 +1,12 @@
 import type { PatternCell, ColorStat } from '../../types/pattern'
 import type { PaletteColor } from '../../types/palette'
 
+/** Compute per-color usage statistics, skipping transparent cells. */
 export function computeColorStats(cells: PatternCell[]): ColorStat[] {
   const countMap = new Map<string, { color: PaletteColor; count: number }>()
 
   for (const cell of cells) {
+    if (cell.isTransparent) continue  // transparent cells have no bead
     const key = `${cell.color.brand}__${cell.color.code}`
     if (!countMap.has(key)) {
       countMap.set(key, { color: cell.color, count: 0 })
