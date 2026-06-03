@@ -6,7 +6,7 @@
 set -e  # 任何命令失败立即停止
 
 REPO_NAME="dora-beads-pattern-converter"
-GITEE_USER="你的Gitee用户名"  # TODO: 替换为你的 Gitee 用户名
+GITEE_USER="its-doraemon77"
 GITEE_REMOTE="git@gitee.com:${GITEE_USER}/${REPO_NAME}.git"
 
 echo "▶ 构建项目（Gitee Pages base 路径）..."
