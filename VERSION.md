@@ -1,3 +1,3 @@
-Current Version: v0.3.3
+Current Version: v0.3.4
 Status: Feature Release
-Last Updated: 2026-06-03
+Last Updated: 2026-06-04

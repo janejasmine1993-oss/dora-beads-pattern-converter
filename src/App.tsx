@@ -22,6 +22,7 @@ import './index.css'
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [workTitle, setWorkTitle] = useState('')
+  const [mirror, setMirror] = useState(false)
   const [width, setWidth] = useState(52)
   const [height, setHeight] = useState(52)
   const [brand, setBrand] = useState<BrandName>('MARD')
@@ -32,7 +33,6 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Re-match when color settings change (if image is already generated)
   useEffect(() => {
     if (rawPixels && rawPixels.length > 0) {
       runRematch(rawPixels, brand, width, height)
@@ -42,7 +42,6 @@ function App() {
 
   function handleImageLoad(url: string, file: File) {
     setImageUrl(url)
-    // Use filename (minus extension) as default work title
     setWorkTitle(file.name.replace(/\.[^.]+$/, ''))
     setRawPixels(null)
     setPatternData(null)
@@ -65,12 +64,10 @@ function App() {
 
   function handleMaxColorsChange(n: number) {
     setMaxColors(n)
-    // useEffect handles re-match
   }
 
   function handleMergeThresholdChange(n: number) {
     setMergeThreshold(n)
-    // useEffect handles re-match
   }
 
   function runRematch(
@@ -82,15 +79,12 @@ function App() {
     const palette = getPalette(targetBrand)
     const labCache = buildLabCache(palette)
 
-    // Separate transparent vs non-transparent
     const nonTransparent = pixels.filter(px => !px.isTransparent)
     const transparentCount = pixels.length - nonTransparent.length
 
-    // Step 1: Median-cut quantization (reduces cardinality to maxColors)
     const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
     const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
 
-    // Step 2: Match each cluster center to nearest palette color (at most maxColors matches)
     const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
     for (const c of clusters) {
       const key = c.join(',')
@@ -99,7 +93,6 @@ function App() {
       }
     }
 
-    // Step 3: Build all cells using cluster assignments
     let ntIdx = 0
     let cells: PatternCell[] = pixels.map(px => {
       if (px.isTransparent) {
@@ -110,7 +103,6 @@ function App() {
       return { row: px.y, col: px.x, isTransparent: false, color }
     })
 
-    // Step 4: Merge low-usage colors
     if (mergeThreshold > 0) {
       cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
     }
@@ -163,7 +155,7 @@ function App() {
           <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
           <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
         </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.3.2</span>
+        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.3.4</span>
       </header>
 
       {errorMsg && (
@@ -174,7 +166,7 @@ function App() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Upload + Size + Color settings */}
+        {/* Left: Upload + Title + Size + Color settings */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
           <UploadPanel onImageLoad={handleImageLoad} />
           <SettingsPanel
@@ -184,6 +176,8 @@ function App() {
             onGenerate={generatePattern}
             isGenerating={isGenerating}
             canGenerate={!!imageUrl}
+            workTitle={workTitle}
+            onWorkTitleChange={setWorkTitle}
           />
           <ColorControlPanel
             maxColors={maxColors}
@@ -201,6 +195,7 @@ function App() {
               patternData={patternData}
               width={width}
               height={height}
+              mirror={mirror}
             />
           </div>
         </main>
@@ -213,11 +208,15 @@ function App() {
             width={width}
             height={height}
             patternData={patternData}
+            workTitle={workTitle}
+            mirror={mirror}
           />
           <ExportPanel
             brand={brand}
             patternData={patternData}
             workTitle={workTitle}
+            mirror={mirror}
+            onMirrorChange={setMirror}
           />
         </aside>
       </div>

@@ -9,6 +9,8 @@ interface SettingsPanelProps {
   onGenerate: () => void
   isGenerating: boolean
   canGenerate: boolean
+  workTitle: string
+  onWorkTitleChange: (v: string) => void
 }
 
 export function SettingsPanel({
@@ -18,6 +20,8 @@ export function SettingsPanel({
   onGenerate,
   isGenerating,
   canGenerate,
+  workTitle,
+  onWorkTitleChange,
 }: SettingsPanelProps) {
   const [customW, setCustomW] = useState(String(width))
   const [customH, setCustomH] = useState(String(height))
@@ -41,6 +45,17 @@ export function SettingsPanel({
 
   return (
     <div>
+      {/* Work title input */}
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图纸名称</p>
+      <input
+        type="text"
+        value={workTitle}
+        onChange={(e) => onWorkTitleChange(e.target.value)}
+        placeholder="例如：天王星、御膳房、大版"
+        maxLength={30}
+        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-4 focus:outline-none focus:border-blue-400"
+      />
+
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图纸尺寸</p>
       <div className="grid grid-cols-3 gap-1 mb-3">
         {PRESET_SIZES.map((s) => (

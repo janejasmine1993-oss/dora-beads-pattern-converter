@@ -1,18 +1,34 @@
 # Decision Log
 
+## 2026-06-04（v0.3.4）
+
+### 决策
+
+镜像功能通过"坐标映射"而非 `ctx.scale(-1, 1)` 实现。
+
+### 原因
+
+`ctx.scale(-1, 1)` 会导致整个 Canvas 内容镜像，包括所有文字（品牌文案、色号、坐标、图例、水印），文字将变成反向字体无法读取。使用 `mirroredCol = width - 1 - col` 只改变格子内容的 x 坐标映射，所有文字以正常方向绘制在原位置，保持可读。
+
+### 影响
+
+渲染循环需要区分"视觉列"（绘制位置）和"源列"（数据来源），两次循环都要正确计算 `drawCol`。
+
+---
+
 ## 2026-06-03（v0.2.5）
 
 ### 决策
 
-部署平台推荐 Vercel，不使用 `vercel.json` 或 `netlify.toml` 额外配置。
+部署平台使用 Cloudflare Pages，Wrangler CLI 手动部署，不添加额外配置文件。
 
 ### 原因
 
-本项目是纯静态 SPA，无客户端路由（无需 SPA 重定向规则）、无环境变量、无后端。Vite 默认构建输出即可被 Vercel / Netlify 直接托管。额外的配置文件在没有特殊需求时增加维护成本。
+本项目是纯静态 SPA，无客户端路由、无环境变量、无后端。Vite 默认构建输出可直接部署。Cloudflare Pages 已通过 Wrangler 上线，稳定运行。
 
 ### 影响
 
-部署步骤极简：create repo → import to Vercel → deploy。构建命令 `npm run build`，输出目录 `dist`。
+每次更新需手动执行 `npm run build` + `npx wrangler pages deploy dist --project-name dora-beads-pattern-converter`。可升级为 GitHub 自动部署（步骤见 docs/11_DEPLOYMENT.md）。
 
 ---
 

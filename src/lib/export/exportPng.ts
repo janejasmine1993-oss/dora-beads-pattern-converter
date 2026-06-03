@@ -1,4 +1,4 @@
-import type { PatternData, PatternCell, ColorStat } from '../../types/pattern'
+import type { PatternData, ColorStat } from '../../types/pattern'
 import type { BrandName } from '../../types/palette'
 import { buildFileName } from '../utils/fileName'
 import { buildShortCodeMap } from '../utils/stats'
@@ -7,7 +7,7 @@ import { drawProfessionalTemplate } from './drawPatternTemplate'
 
 export type PngExportMode = 'simple' | 'professional'
 
-// ─── Simple export (legacy) ──────────────────────────────────────────────────
+// ─── Simple export helpers ────────────────────────────────────────────────────
 
 function calcExportCellSize(w: number, h: number): number {
   const m = Math.max(w, h)
@@ -29,14 +29,6 @@ function fillTransparentBg(
   }
 }
 
-function drawSimpleCells(ctx: CanvasRenderingContext2D, cells: PatternCell[], cs: number): void {
-  for (const cell of cells) {
-    if (cell.isTransparent) continue
-    ctx.fillStyle = cell.color.hex
-    ctx.fillRect(cell.col * cs, cell.row * cs, cs, cs)
-  }
-}
-
 function drawSimpleGridLines(ctx: CanvasRenderingContext2D, w: number, h: number, cs: number): void {
   ctx.strokeStyle = 'rgba(0,0,0,0.15)'
   ctx.lineWidth = 1
@@ -45,27 +37,6 @@ function drawSimpleGridLines(ctx: CanvasRenderingContext2D, w: number, h: number
   }
   for (let y = 0; y <= h; y++) {
     ctx.beginPath(); ctx.moveTo(0, y * cs); ctx.lineTo(w * cs, y * cs); ctx.stroke()
-  }
-}
-
-function drawSimpleLabels(
-  ctx: CanvasRenderingContext2D,
-  cells: PatternCell[],
-  colorStats: ColorStat[],
-  cs: number
-): void {
-  if (cs < 14) return
-  const map = buildShortCodeMap(colorStats)
-  const fs = Math.max(8, Math.floor(cs * 0.38))
-  ctx.font = `bold ${fs}px monospace`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  for (const cell of cells) {
-    if (cell.isTransparent) continue
-    const label = map.get(`${cell.color.brand}__${cell.color.code}`) ?? '?'
-    const lum = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
-    ctx.fillStyle = lum > 140 ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.88)'
-    ctx.fillText(label, cell.col * cs + cs / 2, cell.row * cs + cs / 2)
   }
 }
 
@@ -84,19 +55,20 @@ export function exportPatternAsPng(
   patternData: PatternData,
   brand: BrandName,
   mode: PngExportMode = 'professional',
-  workTitle = ''
+  workTitle = '',
+  mirror = false
 ): void {
   const { size, cells, colorStats } = patternData
   const { width, height } = size
-  const fileName = buildFileName(brand, width, height, 'png')
+  const fileName = buildFileName(brand, width, height, 'png', workTitle, mirror)
 
   if (mode === 'professional') {
-    const canvas = drawProfessionalTemplate({ patternData, brand, workTitle })
+    const canvas = drawProfessionalTemplate({ patternData, brand, workTitle, mirror })
     triggerDownload(canvas.toDataURL('image/png'), fileName)
     return
   }
 
-  // Simple mode (legacy grid export)
+  // Simple mode (legacy grid export, supports mirror)
   const cs = calcExportCellSize(width, height)
   const WM_H = 40
   const cw = width * cs
@@ -111,9 +83,33 @@ export function exportPatternAsPng(
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, cw, ch)
   fillTransparentBg(ctx, width, height, cs)
-  drawSimpleCells(ctx, cells, cs)
+
+  // Fill cells (mirror: visual col reads from mirrored source col)
+  for (const cell of cells) {
+    if (cell.isTransparent) continue
+    const drawCol = mirror ? (width - 1 - cell.col) : cell.col
+    ctx.fillStyle = cell.color.hex
+    ctx.fillRect(drawCol * cs, cell.row * cs, cs, cs)
+  }
+
   drawSimpleGridLines(ctx, width, height, cs)
-  drawSimpleLabels(ctx, cells, colorStats, cs)
+
+  // Color labels (mirror position, text is always readable)
+  if (cs >= 14) {
+    const map = buildShortCodeMap(colorStats as ColorStat[])
+    const fs = Math.max(8, Math.floor(cs * 0.38))
+    ctx.font = `bold ${fs}px monospace`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (const cell of cells) {
+      if (cell.isTransparent) continue
+      const drawCol = mirror ? (width - 1 - cell.col) : cell.col
+      const label = map.get(`${cell.color.brand}__${cell.color.code}`) ?? '?'
+      const lum = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
+      ctx.fillStyle = lum > 140 ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.88)'
+      ctx.fillText(label, drawCol * cs + cs / 2, cell.row * cs + cs / 2)
+    }
+  }
 
   // Watermark strip
   ctx.fillStyle = '#f8fafc'
@@ -122,13 +118,14 @@ export function exportPatternAsPng(
   ctx.lineWidth = 1
   ctx.beginPath(); ctx.moveTo(0, height * cs); ctx.lineTo(cw, height * cs); ctx.stroke()
   const d = new Date().toISOString().slice(0, 10)
+  const mirrorLabel = mirror ? ' [镜像]' : ''
   ctx.fillStyle = 'rgba(0,0,0,0.30)'
   ctx.font = '13px sans-serif'
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
-  ctx.fillText(`${brand} · ${width}×${height} 格 · ${d}`, 14, height * cs + WM_H / 2)
+  ctx.fillText(`${brand} · ${width}×${height} 格${mirrorLabel} · ${d}`, 14, height * cs + WM_H / 2)
   ctx.font = 'bold 13px sans-serif'
   ctx.textAlign = 'right'
-  ctx.fillText('哆啦拼豆图纸库', cw - 14, height * cs + WM_H / 2)
+  ctx.fillText('哆啦拼豆图纸', cw - 14, height * cs + WM_H / 2)
 
   triggerDownload(canvas.toDataURL('image/png'), fileName)
 }

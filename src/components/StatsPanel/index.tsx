@@ -3,30 +3,49 @@ import type { PatternData } from '../../types/pattern'
 import { buildShortCodeMap } from '../../lib/utils/stats'
 import { getBrightness } from '../../lib/utils/color'
 
+const BRAND_SERIES: Record<string, string> = {
+  'MARD': 'Mard221',
+  'COCO': 'COCO',
+  '漫漫': '漫漫',
+  '盼盼': '盼盼',
+  '咪小窝': '咪小窝',
+}
+
 interface StatsPanelProps {
   brand: BrandName
   width: number
   height: number
   patternData: PatternData | null
+  workTitle?: string
+  mirror?: boolean
 }
 
-export function StatsPanel({ brand, width, height, patternData }: StatsPanelProps) {
+export function StatsPanel({ brand, width, height, patternData, workTitle, mirror = false }: StatsPanelProps) {
   const canvasTotal = width * height
-
-  // When pattern is generated, use real bead count (excludes transparent cells)
   const beadCount = patternData?.beadCount ?? canvasTotal
   const transparentCount = patternData?.transparentCount ?? 0
   const totalWithLoss = Math.ceil(beadCount * 1.05)
-
   const colorStats = patternData?.colorStats ?? []
   const shortCodeMap = buildShortCodeMap(colorStats)
+  const seriesName = BRAND_SERIES[brand] ?? brand
 
   return (
     <div className="mb-4">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图纸统计</p>
 
       <div className="bg-gray-50 rounded p-3 text-sm space-y-1.5 mb-3">
-        <Row label="当前品牌" value={brand} />
+        {/* Work title & mirror status */}
+        <Row label="图纸名称" value={workTitle || '未命名图纸'} />
+        <div className="flex justify-between">
+          <span className="text-gray-500">镜像状态</span>
+          <span className={mirror ? 'font-medium text-red-600' : 'font-medium text-gray-400'}>
+            {mirror ? '已开启' : '未开启'}
+          </span>
+        </div>
+
+        <div className="border-t border-gray-200 pt-1.5" />
+
+        <Row label="当前品牌" value={`${brand}（${seriesName}）`} />
         <Row label="画布尺寸" value={`${width} × ${height} 格`} />
         <Row label="实际用豆" value={patternData ? `${beadCount.toLocaleString()} 颗` : '—'} />
         {patternData && transparentCount > 0 && (
@@ -59,10 +78,7 @@ export function StatsPanel({ brand, width, height, patternData }: StatsPanelProp
             const textColor = brightness > 140 ? '#000' : '#fff'
 
             return (
-              <div
-                key={key}
-                className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5 text-xs"
-              >
+              <div key={key} className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5 text-xs">
                 <div
                   className="w-8 h-6 rounded flex items-center justify-center font-bold shrink-0"
                   style={{ backgroundColor: stat.color.hex, color: textColor, fontSize: 9 }}

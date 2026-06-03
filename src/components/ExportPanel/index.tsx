@@ -7,11 +7,19 @@ interface ExportPanelProps {
   brand: BrandName
   patternData: PatternData | null
   workTitle?: string
+  mirror?: boolean
+  onMirrorChange?: (v: boolean) => void
 }
 
 type ExportStatus = { type: 'success' | 'error' | 'warn'; text: string } | null
 
-export function ExportPanel({ brand, patternData, workTitle = '' }: ExportPanelProps) {
+export function ExportPanel({
+  brand,
+  patternData,
+  workTitle = '',
+  mirror = false,
+  onMirrorChange,
+}: ExportPanelProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [status, setStatus] = useState<ExportStatus>(null)
   const [pngMode, setPngMode] = useState<PngExportMode>('professional')
@@ -29,7 +37,7 @@ export function ExportPanel({ brand, patternData, workTitle = '' }: ExportPanelP
     setIsExporting(true)
     setStatus(null)
     try {
-      exportPatternAsPng(patternData, brand, pngMode, workTitle)
+      exportPatternAsPng(patternData, brand, pngMode, workTitle, mirror)
       setStatus({ type: 'success', text: 'PNG 已导出' })
     } catch (err) {
       console.error(err)
@@ -64,6 +72,32 @@ export function ExportPanel({ brand, patternData, workTitle = '' }: ExportPanelP
       {!hasPattern && (
         <p className="text-xs text-gray-400 mb-2">生成图纸后可导出</p>
       )}
+
+      {/* Mirror toggle */}
+      <div className="flex items-start gap-2 mb-3 bg-gray-50 rounded px-2.5 py-2 border border-gray-200">
+        <button
+          role="switch"
+          aria-checked={mirror}
+          onClick={() => onMirrorChange?.(!mirror)}
+          className={`mt-0.5 relative shrink-0 w-8 h-4 rounded-full transition-colors focus:outline-none ${
+            mirror ? 'bg-red-500' : 'bg-gray-300'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+              mirror ? 'translate-x-4' : 'translate-x-0'
+            }`}
+          />
+        </button>
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-gray-700 leading-snug">
+            左右镜像{mirror && <span className="ml-1.5 text-red-600 font-semibold">已开启</span>}
+          </p>
+          <p className="text-xs text-gray-400 leading-snug mt-0.5">
+            适合反面拼、熨烫或镜像制作
+          </p>
+        </div>
+      </div>
 
       {/* Mode selector */}
       <div className="flex gap-1 mb-2">

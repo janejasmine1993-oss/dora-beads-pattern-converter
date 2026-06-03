@@ -2,19 +2,13 @@ import type { PixelCell, PatternCell, ColorStat } from '../../types/pattern'
 import { getBrightness } from '../../lib/utils/color'
 import { buildShortCodeMap } from '../../lib/utils/stats'
 
-/** Canvas size (pixels) per bead cell, given pattern dimensions. */
 export function calcCellSize(patternW: number, patternH: number): number {
   const MAX_DISPLAY = 520
   return Math.max(2, Math.floor(MAX_DISPLAY / Math.max(patternW, patternH)))
 }
 
-/** Light gray used as the "empty/transparent" cell background in previews. */
 const TRANSPARENT_BG = '#e8e8e8'
 
-/**
- * Draw checkerboard-style background for the entire canvas.
- * Two alternating light grays clearly indicate "no bead here" areas.
- */
 function fillTransparentBackground(
   ctx: CanvasRenderingContext2D,
   canvasW: number,
@@ -36,14 +30,16 @@ export function drawPixelTab(
   rawPixels: PixelCell[],
   width: number,
   height: number,
-  cellSize: number
+  cellSize: number,
+  mirror = false
 ): void {
   fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
   ctx.imageSmoothingEnabled = false
   for (const px of rawPixels) {
     if (px.isTransparent) continue
+    const drawX = mirror ? (width - 1 - px.x) : px.x
     ctx.fillStyle = px.hex
-    ctx.fillRect(px.x * cellSize, px.y * cellSize, cellSize, cellSize)
+    ctx.fillRect(drawX * cellSize, px.y * cellSize, cellSize, cellSize)
   }
 }
 
@@ -52,19 +48,18 @@ export function drawGridTab(
   cells: PatternCell[],
   width: number,
   height: number,
-  cellSize: number
+  cellSize: number,
+  mirror = false
 ): void {
-  // Background: checkerboard for transparent areas, filled over by palette colors
   fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
 
-  // Fill non-transparent cells with matched palette color
   for (const cell of cells) {
     if (cell.isTransparent) continue
+    const drawCol = mirror ? (width - 1 - cell.col) : cell.col
     ctx.fillStyle = cell.color.hex
-    ctx.fillRect(cell.col * cellSize, cell.row * cellSize, cellSize, cellSize)
+    ctx.fillRect(drawCol * cellSize, cell.row * cellSize, cellSize, cellSize)
   }
 
-  // Grid lines over everything
   ctx.strokeStyle = 'rgba(0,0,0,0.12)'
   ctx.lineWidth = 0.5
   for (let x = 0; x <= width; x++) {
@@ -87,9 +82,10 @@ export function drawColorCodeTab(
   colorStats: ColorStat[],
   width: number,
   height: number,
-  cellSize: number
+  cellSize: number,
+  mirror = false
 ): void {
-  drawGridTab(ctx, cells, width, height, cellSize)
+  drawGridTab(ctx, cells, width, height, cellSize, mirror)
 
   if (cellSize < 10) return
 
@@ -100,14 +96,15 @@ export function drawColorCodeTab(
   ctx.textBaseline = 'middle'
 
   for (const cell of cells) {
-    if (cell.isTransparent) continue  // no label on transparent cells
+    if (cell.isTransparent) continue
+    const drawCol = mirror ? (width - 1 - cell.col) : cell.col
     const key = `${cell.color.brand}__${cell.color.code}`
     const label = shortCodeMap.get(key) ?? '?'
     const brightness = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
     ctx.fillStyle = brightness > 140 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)'
     ctx.fillText(
       label,
-      cell.col * cellSize + cellSize / 2,
+      drawCol * cellSize + cellSize / 2,
       cell.row * cellSize + cellSize / 2
     )
   }
@@ -123,7 +120,6 @@ export function drawStatsTab(
 
   const total = colorStats.reduce((s, c) => s + c.count, 0)
 
-  // Top stacked bar (proportional color distribution, non-transparent only)
   const barH = 36
   let x = 0
   for (const stat of colorStats) {
@@ -133,7 +129,6 @@ export function drawStatsTab(
     x += w
   }
 
-  // Color swatch grid
   const shortCodeMap = buildShortCodeMap(colorStats)
   const swatchSize = 28
   const rowH = swatchSize + 32
@@ -167,5 +162,4 @@ export function drawStatsTab(
   }
 }
 
-// Keep export for unused import compatibility
 export { TRANSPARENT_BG }
