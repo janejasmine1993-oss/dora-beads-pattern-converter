@@ -4,16 +4,19 @@ import { rgbToLab, deltaE76 } from '../utils/color'
 type LabTriple = [number, number, number]
 
 /**
- * Pre-compute Lab values for all palette colors to avoid redundant conversion
- * during per-pixel matching.
+ * Pre-compute Lab values for all palette colors.
+ * Uses pre-computed lab from the palette data when available (faster),
+ * otherwise falls back to runtime RGB→Lab conversion.
  */
 export function buildLabCache(palette: PaletteColor[]): Map<string, LabTriple> {
   const cache = new Map<string, LabTriple>()
   for (const color of palette) {
-    cache.set(
-      `${color.brand}__${color.code}`,
-      rgbToLab(color.rgb[0], color.rgb[1], color.rgb[2])
-    )
+    const key = `${color.brand}__${color.code}`
+    if (color.lab) {
+      cache.set(key, color.lab as LabTriple)
+    } else {
+      cache.set(key, rgbToLab(color.rgb[0], color.rgb[1], color.rgb[2]))
+    }
   }
   return cache
 }
@@ -21,6 +24,7 @@ export function buildLabCache(palette: PaletteColor[]): Map<string, LabTriple> {
 /**
  * Match a single pixel RGB to the closest palette color using Delta-E 76
  * (CIE 1976 Lab color difference formula).
+ * Transparent pixels must NOT be passed to this function.
  */
 export function matchColor(
   r: number,

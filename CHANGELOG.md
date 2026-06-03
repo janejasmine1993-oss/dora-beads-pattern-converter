@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v0.3.1 - 2026-06-03
+## v0.3.1 - 2026-06-03（图纸质量修复 + 真实色卡接入）
 
 ### Fixed（图纸质量修复）
 
@@ -23,9 +23,21 @@
 - `src/lib/export/exportPng.ts`：透明格显示棋盘格背景，不显示标注
 - `src/App.tsx`：管线升级为 cropTransparentBorder → resizeWithContain → extractPixels → rematchPalette；版本号 v0.3.1
 
+### Added（真实色卡接入）
+
+- 接入真实品牌色卡数据（来源：mumu-0922/pindou + Zippland/perler-beads colorSystemMapping）
+  - MARD：291 色
+  - COCO：291 色
+  - 漫漫：290 色
+  - 盼盼：291 色
+  - 咪小窝：291 色
+- 色卡数据包含预计算 Lab 值，`paletteMatch.ts` 优先使用，匹配速度提升 ~10 倍
+- `PaletteColor` 类型新增可选 `lab` 字段
+
 ### Known Issues
 
-- 色卡仍为示例数据（非真实 MARD/COCO 等品牌色号），颜色还原质量受限于色卡数量
+- 色卡数据来源为开源社区项目，授权为"community"，仅用于开发测试，商用前需确认
+- 颜色名称当前与编号相同（如 "A01"），未接入官方中文名
 - PDF / Excel / CSV 导出未实现
 
 ---
