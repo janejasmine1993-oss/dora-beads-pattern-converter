@@ -1,0 +1,22 @@
+[
+  { "brand": "COCO", "code": "C001", "name": "白色", "hex": "#FFFFFF", "rgb": [255, 255, 255] },
+  { "brand": "COCO", "code": "C002", "name": "奶油白", "hex": "#FFF8DC", "rgb": [255, 248, 220] },
+  { "brand": "COCO", "code": "C003", "name": "柠檬黄", "hex": "#FFF44F", "rgb": [255, 244, 79] },
+  { "brand": "COCO", "code": "C004", "name": "金黄", "hex": "#FFD700", "rgb": [255, 215, 0] },
+  { "brand": "COCO", "code": "C005", "name": "橙红", "hex": "#FF4500", "rgb": [255, 69, 0] },
+  { "brand": "COCO", "code": "C006", "name": "玫红", "hex": "#FF007F", "rgb": [255, 0, 127] },
+  { "brand": "COCO", "code": "C007", "name": "樱花粉", "hex": "#FFB7C5", "rgb": [255, 183, 197] },
+  { "brand": "COCO", "code": "C008", "name": "薰衣草紫", "hex": "#B57EDC", "rgb": [181, 126, 220] },
+  { "brand": "COCO", "code": "C009", "name": "宝蓝", "hex": "#1F51FF", "rgb": [31, 81, 255] },
+  { "brand": "COCO", "code": "C010", "name": "浅蓝", "hex": "#ADD8E6", "rgb": [173, 216, 230] },
+  { "brand": "COCO", "code": "C011", "name": "翠绿", "hex": "#00A550", "rgb": [0, 165, 80] },
+  { "brand": "COCO", "code": "C012", "name": "薄荷绿", "hex": "#98FF98", "rgb": [152, 255, 152] },
+  { "brand": "COCO", "code": "C013", "name": "深棕", "hex": "#6B3A2A", "rgb": [107, 58, 42] },
+  { "brand": "COCO", "code": "C014", "name": "驼色", "hex": "#C19A6B", "rgb": [193, 154, 107] },
+  { "brand": "COCO", "code": "C015", "name": "银灰", "hex": "#C0C0C0", "rgb": [192, 192, 192] },
+  { "brand": "COCO", "code": "C016", "name": "炭灰", "hex": "#505050", "rgb": [80, 80, 80] },
+  { "brand": "COCO", "code": "C017", "name": "黑色", "hex": "#000000", "rgb": [0, 0, 0] },
+  { "brand": "COCO", "code": "C018", "name": "深紫", "hex": "#4B0082", "rgb": [75, 0, 130] },
+  { "brand": "COCO", "code": "C019", "name": "青绿", "hex": "#00CED1", "rgb": [0, 206, 209] },
+  { "brand": "COCO", "code": "C020", "name": "肤色", "hex": "#FFDAB9", "rgb": [255, 218, 185] }
+]

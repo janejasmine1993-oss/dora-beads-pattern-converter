@@ -1,0 +1,22 @@
+[
+  { "brand": "MARD", "code": "001", "name": "白色", "hex": "#FFFFFF", "rgb": [255, 255, 255] },
+  { "brand": "MARD", "code": "002", "name": "象牙白", "hex": "#FFFFF0", "rgb": [255, 255, 240] },
+  { "brand": "MARD", "code": "003", "name": "浅黄", "hex": "#FFFFE0", "rgb": [255, 255, 224] },
+  { "brand": "MARD", "code": "004", "name": "黄色", "hex": "#FFD700", "rgb": [255, 215, 0] },
+  { "brand": "MARD", "code": "005", "name": "橙色", "hex": "#FFA500", "rgb": [255, 165, 0] },
+  { "brand": "MARD", "code": "006", "name": "红色", "hex": "#FF0000", "rgb": [255, 0, 0] },
+  { "brand": "MARD", "code": "007", "name": "粉红", "hex": "#FFB6C1", "rgb": [255, 182, 193] },
+  { "brand": "MARD", "code": "008", "name": "紫色", "hex": "#800080", "rgb": [128, 0, 128] },
+  { "brand": "MARD", "code": "009", "name": "蓝色", "hex": "#0000FF", "rgb": [0, 0, 255] },
+  { "brand": "MARD", "code": "010", "name": "天蓝", "hex": "#87CEEB", "rgb": [135, 206, 235] },
+  { "brand": "MARD", "code": "011", "name": "绿色", "hex": "#008000", "rgb": [0, 128, 0] },
+  { "brand": "MARD", "code": "012", "name": "浅绿", "hex": "#90EE90", "rgb": [144, 238, 144] },
+  { "brand": "MARD", "code": "013", "name": "棕色", "hex": "#A52A2A", "rgb": [165, 42, 42] },
+  { "brand": "MARD", "code": "014", "name": "浅棕", "hex": "#D2B48C", "rgb": [210, 180, 140] },
+  { "brand": "MARD", "code": "015", "name": "灰色", "hex": "#808080", "rgb": [128, 128, 128] },
+  { "brand": "MARD", "code": "016", "name": "浅灰", "hex": "#D3D3D3", "rgb": [211, 211, 211] },
+  { "brand": "MARD", "code": "017", "name": "深灰", "hex": "#404040", "rgb": [64, 64, 64] },
+  { "brand": "MARD", "code": "018", "name": "黑色", "hex": "#000000", "rgb": [0, 0, 0] },
+  { "brand": "MARD", "code": "019", "name": "深蓝", "hex": "#00008B", "rgb": [0, 0, 139] },
+  { "brand": "MARD", "code": "020", "name": "青色", "hex": "#00FFFF", "rgb": [0, 255, 255] }
+]

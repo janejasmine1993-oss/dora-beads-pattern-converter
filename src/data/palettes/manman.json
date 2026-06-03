@@ -1,0 +1,22 @@
+[
+  { "brand": "漫漫", "code": "MM001", "name": "白色", "hex": "#FFFFFF", "rgb": [255, 255, 255] },
+  { "brand": "漫漫", "code": "MM002", "name": "米白", "hex": "#FAF0E6", "rgb": [250, 240, 230] },
+  { "brand": "漫漫", "code": "MM003", "name": "浅黄", "hex": "#FFFACD", "rgb": [255, 250, 205] },
+  { "brand": "漫漫", "code": "MM004", "name": "向日葵黄", "hex": "#FFC300", "rgb": [255, 195, 0] },
+  { "brand": "漫漫", "code": "MM005", "name": "橙色", "hex": "#FF8C00", "rgb": [255, 140, 0] },
+  { "brand": "漫漫", "code": "MM006", "name": "大红", "hex": "#CC0000", "rgb": [204, 0, 0] },
+  { "brand": "漫漫", "code": "MM007", "name": "粉色", "hex": "#FFC0CB", "rgb": [255, 192, 203] },
+  { "brand": "漫漫", "code": "MM008", "name": "紫罗兰", "hex": "#EE82EE", "rgb": [238, 130, 238] },
+  { "brand": "漫漫", "code": "MM009", "name": "蓝色", "hex": "#0055A4", "rgb": [0, 85, 164] },
+  { "brand": "漫漫", "code": "MM010", "name": "水蓝", "hex": "#B0E0E6", "rgb": [176, 224, 230] },
+  { "brand": "漫漫", "code": "MM011", "name": "绿色", "hex": "#228B22", "rgb": [34, 139, 34] },
+  { "brand": "漫漫", "code": "MM012", "name": "嫩绿", "hex": "#ADFF2F", "rgb": [173, 255, 47] },
+  { "brand": "漫漫", "code": "MM013", "name": "咖啡色", "hex": "#7B3F00", "rgb": [123, 63, 0] },
+  { "brand": "漫漫", "code": "MM014", "name": "卡其色", "hex": "#BDB76B", "rgb": [189, 183, 107] },
+  { "brand": "漫漫", "code": "MM015", "name": "浅灰", "hex": "#BEBEBE", "rgb": [190, 190, 190] },
+  { "brand": "漫漫", "code": "MM016", "name": "深灰", "hex": "#696969", "rgb": [105, 105, 105] },
+  { "brand": "漫漫", "code": "MM017", "name": "黑色", "hex": "#000000", "rgb": [0, 0, 0] },
+  { "brand": "漫漫", "code": "MM018", "name": "金色", "hex": "#CFB53B", "rgb": [207, 181, 59] },
+  { "brand": "漫漫", "code": "MM019", "name": "银色", "hex": "#C0C0C0", "rgb": [192, 192, 192] },
+  { "brand": "漫漫", "code": "MM020", "name": "肤色", "hex": "#F5CBA7", "rgb": [245, 203, 167] }
+]
