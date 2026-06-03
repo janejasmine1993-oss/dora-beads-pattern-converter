@@ -1,18 +1,27 @@
 import type { PatternData, PatternCell } from '../../types/pattern'
 import { BEAD_SIZE_MM } from '../../types/pattern'
-import { buildShortCodeMap } from '../utils/stats'
 
-// ─── Layout constants ────────────────────────────────────────────────────────
-const MH = 16      // horizontal margin
-const MV = 12      // vertical margin
-const RW = 38      // ruler width  (row numbers, left & right)
-const RH = 26      // ruler height (col numbers, top & bottom)
-const TITLE_H = 48
-const LEGEND_ENTRY_W = 132
-const LEGEND_ENTRY_H = 42
-const LEGEND_PAD_V = 14
-const STATS_H = 54
-const WM_H = 28     // watermark strip height
+// ─── Brand series names ───────────────────────────────────────────────────────
+const BRAND_SERIES: Record<string, string> = {
+  'MARD': 'Mard221',
+  'COCO': 'COCO',
+  '漫漫': '漫漫',
+  '盼盼': '盼盼',
+  '咪小窝': '咪小窝',
+}
+
+// ─── Layout constants ─────────────────────────────────────────────────────────
+const MH = 18       // horizontal margin
+const MV = 14       // vertical margin
+const RW = 42       // ruler width (row labels)
+const RH = 28       // ruler height (col labels)
+const TITLE_H = 56
+const LEGEND_ENTRY_W = 155
+const LEGEND_ENTRY_H = 46
+const LEGEND_HDR_H = 20  // section header row
+const LEGEND_PAD_V = 8
+const STATS_H = 72       // 2-row stats bar
+const WM_H = 30
 
 export interface TemplateOptions {
   patternData: PatternData
@@ -20,7 +29,8 @@ export interface TemplateOptions {
   workTitle: string
 }
 
-/** Pick export cell size based on pattern dimensions. */
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function cellSize(w: number, h: number): number {
   const m = Math.max(w, h)
   if (m <= 32) return 28
@@ -31,7 +41,6 @@ function cellSize(w: number, h: number): number {
   return 10
 }
 
-/** Ruler label interval – show every N-th line number. */
 function rulerStep(n: number): number {
   if (n <= 50) return 5
   if (n <= 100) return 10
@@ -42,9 +51,57 @@ function physCm(n: number): string {
   return ((n * BEAD_SIZE_MM) / 10).toFixed(1)
 }
 
+/** Bounding box of all non-transparent cells (1-based dimensions). */
+function calcBodyRange(cells: PatternCell[]): { bodyW: number; bodyH: number } | null {
+  let minCol = Infinity, maxCol = -1, minRow = Infinity, maxRow = -1, hasNT = false
+  for (const c of cells) {
+    if (c.isTransparent) continue
+    hasNT = true
+    if (c.col < minCol) minCol = c.col
+    if (c.col > maxCol) maxCol = c.col
+    if (c.row < minRow) minRow = c.row
+    if (c.row > maxRow) maxRow = c.row
+  }
+  if (!hasNT) return null
+  return { bodyW: maxCol - minCol + 1, bodyH: maxRow - minRow + 1 }
+}
+
+/** Label brightness-aware text color. */
+function labelColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  return lum > 155 ? 'rgba(0,0,0,0.70)' : 'rgba(255,255,255,0.85)'
+}
+
+function drawHLine(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number,
+  color = 'rgba(0,0,0,0.10)', lw = 0.5
+): void {
+  ctx.save()
+  ctx.strokeStyle = color; ctx.lineWidth = lw
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.stroke()
+  ctx.restore()
+}
+
+function drawVLine(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, h: number,
+  color = 'rgba(0,0,0,0.10)', lw = 0.5
+): void {
+  ctx.save()
+  ctx.strokeStyle = color; ctx.lineWidth = lw
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + h); ctx.stroke()
+  ctx.restore()
+}
+
+// ─── Main export function ─────────────────────────────────────────────────────
+
 /**
- * Draw a full professional pattern sheet and return the off-screen canvas.
- * Never touches the DOM preview canvas.
+ * Render a full professional pattern sheet to an off-screen canvas.
+ * Cells show the real brand color code (e.g. A01, ZG7) — never internal IDs.
  */
 export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasElement {
   const { patternData, brand, workTitle } = opts
@@ -54,16 +111,16 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   const CS = cellSize(width, height)
   const gridW = width * CS
   const gridH = height * CS
+  const seriesName = BRAND_SERIES[brand] ?? brand
+  const bodyRange = calcBodyRange(cells)
 
-  const shortCodeMap = buildShortCodeMap(colorStats)
-
-  // Legend layout
-  const innerW = MH * 2 + RW * 2 + gridW
-  const legendCols = Math.max(1, Math.floor((innerW - MH * 2) / LEGEND_ENTRY_W))
+  // ── Canvas dimensions ──────────────────────────────────────────────────────
+  const canvasW = MH * 2 + RW * 2 + gridW
+  const legendCols = Math.max(1, Math.floor((canvasW - MH * 2) / LEGEND_ENTRY_W))
   const legendRows = colorStats.length > 0 ? Math.ceil(colorStats.length / legendCols) : 0
-  const legendH = legendRows > 0 ? LEGEND_PAD_V * 2 + legendRows * LEGEND_ENTRY_H : 0
-
-  const canvasW = innerW
+  const legendH = legendRows > 0
+    ? LEGEND_HDR_H + LEGEND_PAD_V + legendRows * LEGEND_ENTRY_H + LEGEND_PAD_V
+    : 0
   const canvasH = MV * 2 + TITLE_H + RH + gridH + RH + legendH + STATS_H + WM_H
 
   const canvas = document.createElement('canvas')
@@ -71,7 +128,7 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   canvas.height = canvasH
   const ctx = canvas.getContext('2d')!
 
-  // Pre-build a fast cell lookup: linear index → PatternCell
+  // Fast cell lookup
   const cellLookup = new Map<number, PatternCell>()
   for (const cell of cells) cellLookup.set(cell.row * width + cell.col, cell)
 
@@ -79,170 +136,156 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   const gridX = MH + RW
   const gridY = MV + TITLE_H + RH
 
-  // ── 1. White background ──────────────────────────────────────────────────
+  // ── 1. White background ────────────────────────────────────────────────────
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvasW, canvasH)
 
-  // ── 2. Title bar ─────────────────────────────────────────────────────────
+  // ── 2. Title bar ───────────────────────────────────────────────────────────
   const ty = MV
-  ctx.fillStyle = '#f8fafc'
+  ctx.fillStyle = '#f0f4ff'
   ctx.fillRect(0, ty, canvasW, TITLE_H)
-  drawHLine(ctx, 0, ty + TITLE_H, canvasW, '#e2e8f0', 1)
+  drawHLine(ctx, 0, ty + TITLE_H, canvasW, '#c7d2fe', 1.5)
 
-  const midY = ty + TITLE_H / 2
-
-  // Brand label
-  ctx.fillStyle = '#4f46e5'
-  ctx.font = 'bold 14px sans-serif'
+  // Brand series (left, prominent)
+  ctx.fillStyle = '#3730a3'
+  ctx.font = 'bold 17px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText(brand, gridX, midY)
+  ctx.fillText(seriesName, gridX, ty + TITLE_H * 0.38)
 
-  // Work title
+  ctx.fillStyle = '#6366f1'
+  ctx.font = '11px sans-serif'
+  ctx.fillText(brand, gridX, ty + TITLE_H * 0.72)
+
+  // Work title (right)
   ctx.fillStyle = '#111827'
-  ctx.font = 'bold 16px sans-serif'
+  ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'right'
-  ctx.fillText(workTitle || '未命名图纸', canvasW - gridX, midY)
+  ctx.textBaseline = 'middle'
+  ctx.fillText(workTitle || '未命名图纸', canvasW - gridX, ty + TITLE_H * 0.38)
 
-  // Dimensions (center)
+  // Dimensions hint (right, second line)
   ctx.fillStyle = '#6b7280'
-  ctx.font = '12px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText(
-    `${width} × ${height} 格 · ${physCm(width)} × ${physCm(height)} cm`,
-    canvasW / 2, midY
-  )
+  ctx.font = '11px sans-serif'
+  ctx.textAlign = 'right'
+  const dimHint = bodyRange
+    ? `图纸 ${width}×${height} · 主体 ${bodyRange.bodyW}×${bodyRange.bodyH}`
+    : `图纸 ${width}×${height} 格`
+  ctx.fillText(dimHint, canvasW - gridX, ty + TITLE_H * 0.72)
 
-  // ── 3. Draw all cells ────────────────────────────────────────────────────
+  // ── 3. Fill cells ──────────────────────────────────────────────────────────
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const cell = cellLookup.get(row * width + col)
       const x = gridX + col * CS
       const y = gridY + row * CS
-      if (!cell || cell.isTransparent) {
-        ctx.fillStyle = (row + col) % 2 === 0 ? '#ebebeb' : '#dfdfdf'
-      } else {
-        ctx.fillStyle = cell.color.hex
-      }
+      ctx.fillStyle = (!cell || cell.isTransparent)
+        ? ((row + col) % 2 === 0 ? '#ededed' : '#e2e2e2')
+        : cell.color.hex
       ctx.fillRect(x, y, CS, CS)
     }
   }
 
-  // ── 4. Grid lines ────────────────────────────────────────────────────────
-  // Thin lines every cell
-  ctx.strokeStyle = 'rgba(0,0,0,0.09)'
+  // ── 4. Grid lines ──────────────────────────────────────────────────────────
+  // Fine lines: every cell
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'
   ctx.lineWidth = 0.5
-  for (let x = 0; x <= width; x++) {
-    drawVLine(ctx, gridX + x * CS, gridY, gridH, undefined, undefined)
-  }
-  for (let y = 0; y <= height; y++) {
-    drawHLine(ctx, gridX, gridY + y * CS, gridW, undefined, undefined)
-  }
+  for (let x = 0; x <= width; x++) drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(0,0,0,0.08)', 0.5)
+  for (let y = 0; y <= height; y++) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(0,0,0,0.08)', 0.5)
 
-  // Medium lines every 10 cells
-  ctx.strokeStyle = 'rgba(0,0,0,0.20)'
-  ctx.lineWidth = 0.8
-  for (let x = 10; x < width; x += 10) drawVLine(ctx, gridX + x * CS, gridY, gridH, undefined, undefined)
-  for (let y = 10; y < height; y += 10) drawHLine(ctx, gridX, gridY + y * CS, gridW, undefined, undefined)
+  // Major lines: every 10 cells
+  for (let x = 10; x < width; x += 10)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(0,0,0,0.28)', 1.2)
+  for (let y = 10; y < height; y += 10) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(0,0,0,0.28)', 1.2)
 
-  // Section lines every 26 cells (pegboard boundary)
-  ctx.strokeStyle = 'rgba(66, 99, 220, 0.40)'
-  ctx.lineWidth = 1.5
-  for (let x = 26; x < width; x += 26) drawVLine(ctx, gridX + x * CS, gridY, gridH, undefined, undefined)
-  for (let y = 26; y < height; y += 26) drawHLine(ctx, gridX, gridY + y * CS, gridW, undefined, undefined)
+  // Board section lines: every 26 cells
+  for (let x = 26; x < width; x += 26)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(70,100,230,0.45)', 1.8)
+  for (let y = 26; y < height; y += 26) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(70,100,230,0.45)', 1.8)
 
-  // ── 5. Color labels in cells ─────────────────────────────────────────────
-  if (CS >= 11) {
-    const fs = Math.max(7, Math.floor(CS * 0.38))
+  // ── 5. Color labels (REAL brand code: A01, ZG7, etc.) ─────────────────────
+  if (CS >= 10) {
+    const codeLen = colorStats.length > 0
+      ? Math.max(...colorStats.map(s => s.color.code.length))
+      : 3
+    const fs = Math.max(5, Math.floor(CS * (codeLen >= 3 ? 0.34 : 0.40)))
     ctx.font = `bold ${fs}px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+
     for (const cell of cells) {
       if (cell.isTransparent) continue
-      const key = `${cell.color.brand}__${cell.color.code}`
-      const label = shortCodeMap.get(key) ?? '?'
-      const [r, g, b] = cell.color.rgb
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b
-      ctx.fillStyle = lum > 155 ? 'rgba(0,0,0,0.68)' : 'rgba(255,255,255,0.82)'
+      ctx.fillStyle = labelColor(cell.color.hex)
+      // Use real brand code directly — never internal system codes
       ctx.fillText(
-        label,
+        cell.color.code,
         gridX + cell.col * CS + CS / 2,
         gridY + cell.row * CS + CS / 2
       )
     }
   }
 
-  // ── 6. Grid outer border ─────────────────────────────────────────────────
-  ctx.strokeStyle = 'rgba(0,0,0,0.32)'
-  ctx.lineWidth = 1.5
+  // ── 6. Grid outer border ───────────────────────────────────────────────────
+  ctx.strokeStyle = '#1e293b'
+  ctx.lineWidth = 2
   ctx.strokeRect(gridX, gridY, gridW, gridH)
 
-  // ── 7. Rulers ────────────────────────────────────────────────────────────
-  const rulerFont = `${Math.min(10, Math.max(7, CS - 3))}px sans-serif`
+  // ── 7. Rulers (all 4 sides) ────────────────────────────────────────────────
+  const rulerFontSize = Math.min(10, Math.max(7, CS - 3))
+  const rulerFont = `${rulerFontSize}px sans-serif`
   const colStep = rulerStep(width)
   const rowStep = rulerStep(height)
 
-  // Top ruler
-  drawRulerBg(ctx, gridX, MV + TITLE_H, gridW, RH)
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = rulerFont
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  for (let c = 1; c <= width; c++) {
-    if (c === 1 || c % colStep === 0 || c === width) {
-      ctx.fillText(String(c), gridX + (c - 0.5) * CS, MV + TITLE_H + RH / 2)
+  // Helper to draw ruler background + label
+  function drawRuler(
+    bx: number, by: number, bw: number, bh: number,
+    axis: 'col' | 'row', count: number, step: number
+  ) {
+    ctx.fillStyle = '#eef2ff'
+    ctx.fillRect(bx, by, bw, bh)
+    ctx.strokeStyle = '#c7d2fe'
+    ctx.lineWidth = 0.5
+    ctx.strokeRect(bx, by, bw, bh)
+
+    ctx.fillStyle = '#4338ca'
+    ctx.font = rulerFont
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    for (let i = 1; i <= count; i++) {
+      const isMajor = i % 10 === 0 || i === 1 || i === count
+      if (!isMajor && i % step !== 0) continue
+      if (axis === 'col') {
+        const cx = bx + (i - 0.5) * CS
+        if (cx < bx || cx > bx + bw) continue
+        ctx.font = isMajor ? `bold ${rulerFontSize}px sans-serif` : rulerFont
+        ctx.fillText(String(i), cx, by + bh / 2)
+      } else {
+        const cy = by + (i - 0.5) * CS
+        if (cy < by || cy > by + bh) continue
+        ctx.font = isMajor ? `bold ${rulerFontSize}px sans-serif` : rulerFont
+        ctx.fillText(String(i), bx + bw / 2, cy)
+      }
     }
   }
 
-  // Bottom ruler
-  const botRulerY = gridY + gridH
-  drawRulerBg(ctx, gridX, botRulerY, gridW, RH)
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = rulerFont
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  for (let c = 1; c <= width; c++) {
-    if (c === 1 || c % colStep === 0 || c === width) {
-      ctx.fillText(String(c), gridX + (c - 0.5) * CS, botRulerY + RH / 2)
-    }
-  }
+  const topRulerY = MV + TITLE_H
+  drawRuler(gridX, topRulerY, gridW, RH, 'col', width, colStep)
+  drawRuler(gridX, gridY + gridH, gridW, RH, 'col', width, colStep)
+  drawRuler(MH, gridY, RW, gridH, 'row', height, rowStep)
+  drawRuler(gridX + gridW, gridY, RW, gridH, 'row', height, rowStep)
 
-  // Left ruler
-  drawRulerBg(ctx, MH, gridY, RW, gridH)
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = rulerFont
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  for (let r = 1; r <= height; r++) {
-    if (r === 1 || r % rowStep === 0 || r === height) {
-      ctx.fillText(String(r), MH + RW / 2, gridY + (r - 0.5) * CS)
-    }
-  }
-
-  // Right ruler
-  drawRulerBg(ctx, gridX + gridW, gridY, RW, gridH)
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = rulerFont
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  for (let r = 1; r <= height; r++) {
-    if (r === 1 || r % rowStep === 0 || r === height) {
-      ctx.fillText(String(r), gridX + gridW + RW / 2, gridY + (r - 0.5) * CS)
-    }
-  }
-
-  // ── 8. Legend ────────────────────────────────────────────────────────────
+  // ── 8. Legend (real brand codes + counts) ─────────────────────────────────
   if (legendRows > 0) {
-    const lgBase = gridY + gridH + RH
+    const lgY = gridY + gridH + RH
 
-    // Section label
+    // Section header
     ctx.fillStyle = '#374151'
-    ctx.font = 'bold 11px sans-serif'
+    ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'left'
-    ctx.textBaseline = 'top'
-    ctx.fillText('色号图例', MH + RW, lgBase + 4)
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`色号图例（${brand} · ${colorStats.length} 色）`, MH + RW, lgY + LEGEND_HDR_H / 2)
+    drawHLine(ctx, MH + RW, lgY + LEGEND_HDR_H, canvasW - MH * 2 - RW, '#e5e7eb', 0.5)
 
-    const lgStartY = lgBase + LEGEND_PAD_V
+    const lgStartY = lgY + LEGEND_HDR_H + LEGEND_PAD_V
 
     colorStats.forEach((stat, i) => {
       const col = i % legendCols
@@ -250,120 +293,91 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
       const lx = MH + RW + col * LEGEND_ENTRY_W
       const ly = lgStartY + row * LEGEND_ENTRY_H
 
-      const key = `${stat.color.brand}__${stat.color.code}`
-      const sc = shortCodeMap.get(key) ?? '?'
+      const swH = 24, swW = 24
 
-      // Swatch
+      // Color swatch
       ctx.fillStyle = stat.color.hex
-      ctx.fillRect(lx, ly + 2, 22, 22)
-      ctx.strokeStyle = 'rgba(0,0,0,0.18)'
+      ctx.fillRect(lx, ly + (LEGEND_ENTRY_H - swH) / 2, swW, swH)
+      ctx.strokeStyle = 'rgba(0,0,0,0.20)'
       ctx.lineWidth = 0.5
-      ctx.strokeRect(lx, ly + 2, 22, 22)
+      ctx.strokeRect(lx, ly + (LEGEND_ENTRY_H - swH) / 2, swW, swH)
 
-      // Short code
+      // Real brand code (the key info)
       ctx.fillStyle = '#111827'
-      ctx.font = 'bold 10px monospace'
+      ctx.font = 'bold 11px monospace'
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
-      ctx.fillText(sc, lx + 26, ly + 2)
+      ctx.fillText(stat.color.code, lx + swW + 6, ly + 4)
 
-      // Brand code
-      ctx.fillStyle = '#6b7280'
-      ctx.font = '9px sans-serif'
-      ctx.fillText(stat.color.code, lx + 26, ly + 14)
+      // Color name (show only if different from code)
+      const hasName = stat.color.name && stat.color.name !== stat.color.code
+      if (hasName) {
+        ctx.fillStyle = '#6b7280'
+        ctx.font = '9px sans-serif'
+        ctx.fillText(stat.color.name, lx + swW + 6, ly + 18)
+      }
 
-      // Usage (right-aligned in entry)
+      // Usage counts (right-aligned)
+      ctx.textAlign = 'right'
       ctx.fillStyle = '#1f2937'
       ctx.font = 'bold 10px sans-serif'
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'top'
-      ctx.fillText(`${stat.countWithLoss}颗`, lx + LEGEND_ENTRY_W - 2, ly + 2)
+      ctx.fillText(`${stat.count}颗`, lx + LEGEND_ENTRY_W - 2, ly + 4)
 
-      ctx.fillStyle = '#9ca3af'
+      ctx.fillStyle = '#6b7280'
       ctx.font = '9px sans-serif'
-      ctx.fillText(`${stat.grams}g`, lx + LEGEND_ENTRY_W - 2, ly + 14)
+      ctx.fillText(`建议${stat.countWithLoss}·${stat.grams}g`, lx + LEGEND_ENTRY_W - 2, ly + 18)
     })
   }
 
-  // ── 9. Stats bar ─────────────────────────────────────────────────────────
+  // ── 9. Stats bar (2 rows) ──────────────────────────────────────────────────
   const statsY = gridY + gridH + RH + legendH
   ctx.fillStyle = '#f8fafc'
   ctx.fillRect(0, statsY, canvasW, STATS_H)
   drawHLine(ctx, 0, statsY, canvasW, '#e2e8f0', 1)
+  drawHLine(ctx, 0, statsY + STATS_H, canvasW, '#e2e8f0', 0.5)
 
   const beads = patternData.beadCount
-  const statsItems = [
-    `品牌：${brand}`,
+  const date = new Date().toISOString().slice(0, 10)
+
+  const row1Items = [
+    `品牌：${brand}（${seriesName}）`,
     `颜色：${colorStats.length} 种`,
-    `用豆：${beads.toLocaleString()} 颗`,
-    `备货（含5%）：${Math.ceil(beads * 1.05).toLocaleString()} 颗`,
-    `图纸：${width} × ${height} 格`,
-    `成品：${physCm(width)} × ${physCm(height)} cm`,
+    `实际用豆：${beads.toLocaleString()} 颗`,
+    `含5%损耗：${Math.ceil(beads * 1.05).toLocaleString()} 颗`,
+  ]
+  const row2Items = [
+    `图纸尺寸：${width} 列 × ${height} 行`,
+    bodyRange ? `主体范围：${bodyRange.bodyW} 列 × ${bodyRange.bodyH} 行` : `主体：全画布`,
+    `成品约：${physCm(width)} × ${physCm(height)} cm`,
+    `生成日期：${date}`,
   ]
 
-  const segW = (canvasW - MH * 2) / statsItems.length
-  ctx.fillStyle = '#374151'
-  ctx.font = '11px sans-serif'
-  ctx.textAlign = 'left'
+  const segW = (canvasW - MH * 2) / 4
   ctx.textBaseline = 'middle'
-  statsItems.forEach((item, i) => {
-    ctx.fillText(item, MH + i * segW, statsY + STATS_H / 2)
+  ctx.textAlign = 'left'
+
+  row1Items.forEach((item, i) => {
+    ctx.fillStyle = i < 2 ? '#374151' : '#1f2937'
+    ctx.font = i < 2 ? '11px sans-serif' : 'bold 11px sans-serif'
+    ctx.fillText(item, MH + i * segW, statsY + STATS_H * 0.28)
+  })
+  row2Items.forEach((item, i) => {
+    ctx.fillStyle = '#6b7280'
+    ctx.font = '10px sans-serif'
+    ctx.fillText(item, MH + i * segW, statsY + STATS_H * 0.72)
   })
 
-  // ── 10. Watermark strip ──────────────────────────────────────────────────
+  // ── 10. Watermark strip ────────────────────────────────────────────────────
   const wmY = statsY + STATS_H
-  ctx.fillStyle = '#f1f5f9'
+  ctx.fillStyle = '#eef2ff'
   ctx.fillRect(0, wmY, canvasW, WM_H)
-  drawHLine(ctx, 0, wmY, canvasW, '#e2e8f0', 0.5)
+  drawHLine(ctx, 0, wmY, canvasW, '#c7d2fe', 0.5)
 
-  ctx.fillStyle = 'rgba(0,0,0,0.22)'
+  ctx.fillStyle = 'rgba(79,70,229,0.45)'
   ctx.font = '11px sans-serif'
   ctx.textAlign = 'right'
   ctx.textBaseline = 'middle'
-  const date = new Date().toISOString().slice(0, 10)
   ctx.fillText(`哆啦拼豆图纸库 · ${date}`, canvasW - MH, wmY + WM_H / 2)
 
   return canvas
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function drawHLine(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number,
-  color = 'rgba(0,0,0,0.09)',
-  lw = 0.5
-) {
-  ctx.save()
-  ctx.strokeStyle = color
-  ctx.lineWidth = lw
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(x + w, y)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawVLine(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, h: number,
-  color = 'rgba(0,0,0,0.09)',
-  lw = 0.5
-) {
-  ctx.save()
-  ctx.strokeStyle = color ?? 'rgba(0,0,0,0.09)'
-  ctx.lineWidth = lw ?? 0.5
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(x, y + h)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawRulerBg(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number
-) {
-  ctx.fillStyle = '#f3f4f6'
-  ctx.fillRect(x, y, w, h)
 }
