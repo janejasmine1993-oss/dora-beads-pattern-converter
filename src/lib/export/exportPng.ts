@@ -3,126 +3,70 @@ import type { BrandName } from '../../types/palette'
 import { buildFileName } from '../utils/fileName'
 import { buildShortCodeMap } from '../utils/stats'
 import { getBrightness } from '../utils/color'
+import { drawProfessionalTemplate } from './drawPatternTemplate'
 
-export type PngExportMode = 'grid' | 'colorcode'
+export type PngExportMode = 'simple' | 'professional'
+
+// ─── Simple export (legacy) ──────────────────────────────────────────────────
 
 function calcExportCellSize(w: number, h: number): number {
-  const maxDim = Math.max(w, h)
-  if (maxDim <= 52) return 30
-  if (maxDim <= 104) return 20
-  if (maxDim <= 200) return 15
+  const m = Math.max(w, h)
+  if (m <= 52) return 28
+  if (m <= 104) return 20
+  if (m <= 200) return 14
   return 10
 }
 
-/** Fill export canvas with a light-gray checkerboard to indicate transparent areas. */
-function fillTransparentBackground(
+function fillTransparentBg(
   ctx: CanvasRenderingContext2D,
-  gridW: number,
-  gridH: number,
-  cellSize: number
+  gridW: number, gridH: number, cs: number
 ): void {
   for (let row = 0; row < gridH; row++) {
     for (let col = 0; col < gridW; col++) {
       ctx.fillStyle = (row + col) % 2 === 0 ? '#f0f0f0' : '#e4e4e4'
-      ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+      ctx.fillRect(col * cs, row * cs, cs, cs)
     }
   }
 }
 
-function drawCells(
-  ctx: CanvasRenderingContext2D,
-  cells: PatternCell[],
-  cellSize: number
-): void {
+function drawSimpleCells(ctx: CanvasRenderingContext2D, cells: PatternCell[], cs: number): void {
   for (const cell of cells) {
     if (cell.isTransparent) continue
     ctx.fillStyle = cell.color.hex
-    ctx.fillRect(cell.col * cellSize, cell.row * cellSize, cellSize, cellSize)
+    ctx.fillRect(cell.col * cs, cell.row * cs, cs, cs)
   }
 }
 
-function drawGridLines(
-  ctx: CanvasRenderingContext2D,
-  gridW: number,
-  gridH: number,
-  cellSize: number
-): void {
+function drawSimpleGridLines(ctx: CanvasRenderingContext2D, w: number, h: number, cs: number): void {
   ctx.strokeStyle = 'rgba(0,0,0,0.15)'
   ctx.lineWidth = 1
-  for (let x = 0; x <= gridW; x++) {
-    ctx.beginPath()
-    ctx.moveTo(x * cellSize, 0)
-    ctx.lineTo(x * cellSize, gridH * cellSize)
-    ctx.stroke()
+  for (let x = 0; x <= w; x++) {
+    ctx.beginPath(); ctx.moveTo(x * cs, 0); ctx.lineTo(x * cs, h * cs); ctx.stroke()
   }
-  for (let y = 0; y <= gridH; y++) {
-    ctx.beginPath()
-    ctx.moveTo(0, y * cellSize)
-    ctx.lineTo(gridW * cellSize, y * cellSize)
-    ctx.stroke()
+  for (let y = 0; y <= h; y++) {
+    ctx.beginPath(); ctx.moveTo(0, y * cs); ctx.lineTo(w * cs, y * cs); ctx.stroke()
   }
 }
 
-function drawColorLabels(
+function drawSimpleLabels(
   ctx: CanvasRenderingContext2D,
   cells: PatternCell[],
   colorStats: ColorStat[],
-  cellSize: number
+  cs: number
 ): void {
-  if (cellSize < 14) return
-
-  const shortCodeMap = buildShortCodeMap(colorStats)
-  const fontSize = Math.max(8, Math.floor(cellSize * 0.38))
-  ctx.font = `bold ${fontSize}px monospace`
+  if (cs < 14) return
+  const map = buildShortCodeMap(colorStats)
+  const fs = Math.max(8, Math.floor(cs * 0.38))
+  ctx.font = `bold ${fs}px monospace`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-
   for (const cell of cells) {
     if (cell.isTransparent) continue
-    const key = `${cell.color.brand}__${cell.color.code}`
-    const label = shortCodeMap.get(key) ?? '?'
-    const brightness = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
-    ctx.fillStyle = brightness > 140 ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.88)'
-    ctx.fillText(
-      label,
-      cell.col * cellSize + cellSize / 2,
-      cell.row * cellSize + cellSize / 2
-    )
+    const label = map.get(`${cell.color.brand}__${cell.color.code}`) ?? '?'
+    const lum = getBrightness(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])
+    ctx.fillStyle = lum > 140 ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.88)'
+    ctx.fillText(label, cell.col * cs + cs / 2, cell.row * cs + cs / 2)
   }
-}
-
-const WATERMARK_H = 40
-
-function drawWatermarkStrip(
-  ctx: CanvasRenderingContext2D,
-  canvasWidth: number,
-  stripY: number,
-  brand: string,
-  gridW: number,
-  gridH: number
-): void {
-  ctx.fillStyle = '#f8fafc'
-  ctx.fillRect(0, stripY, canvasWidth, WATERMARK_H)
-  ctx.strokeStyle = 'rgba(0,0,0,0.10)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, stripY)
-  ctx.lineTo(canvasWidth, stripY)
-  ctx.stroke()
-
-  const midY = stripY + WATERMARK_H / 2
-  const date = new Date().toISOString().slice(0, 10)
-
-  ctx.fillStyle = 'rgba(0,0,0,0.30)'
-  ctx.font = '13px sans-serif'
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(`${brand} · ${gridW}×${gridH} 格 · ${date}`, 14, midY)
-
-  ctx.fillStyle = 'rgba(0,0,0,0.40)'
-  ctx.font = 'bold 13px sans-serif'
-  ctx.textAlign = 'right'
-  ctx.fillText('哆啦拼豆图纸库', canvasWidth - 14, midY)
 }
 
 function triggerDownload(dataUrl: string, fileName: string): void {
@@ -134,47 +78,57 @@ function triggerDownload(dataUrl: string, fileName: string): void {
   document.body.removeChild(a)
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
+
 export function exportPatternAsPng(
   patternData: PatternData,
   brand: BrandName,
-  mode: PngExportMode = 'grid'
+  mode: PngExportMode = 'professional',
+  workTitle = ''
 ): void {
   const { size, cells, colorStats } = patternData
   const { width, height } = size
-  const cellSize = calcExportCellSize(width, height)
+  const fileName = buildFileName(brand, width, height, 'png')
 
-  const canvasW = width * cellSize
-  const canvasH = height * cellSize + WATERMARK_H
+  if (mode === 'professional') {
+    const canvas = drawProfessionalTemplate({ patternData, brand, workTitle })
+    triggerDownload(canvas.toDataURL('image/png'), fileName)
+    return
+  }
+
+  // Simple mode (legacy grid export)
+  const cs = calcExportCellSize(width, height)
+  const WM_H = 40
+  const cw = width * cs
+  const ch = height * cs + WM_H
 
   const canvas = document.createElement('canvas')
-  canvas.width = canvasW
-  canvas.height = canvasH
-
+  canvas.width = cw
+  canvas.height = ch
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingEnabled = false
 
-  // White base for watermark strip area
   ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvasW, canvasH)
-
-  // Checkerboard background for transparent areas within the grid
-  fillTransparentBackground(ctx, width, height, cellSize)
-
-  // Non-transparent cells in palette color
-  drawCells(ctx, cells, cellSize)
-
-  // Grid lines
-  drawGridLines(ctx, width, height, cellSize)
-
-  // Color code labels (colorcode mode, non-transparent cells only)
-  if (mode === 'colorcode') {
-    drawColorLabels(ctx, cells, colorStats, cellSize)
-  }
+  ctx.fillRect(0, 0, cw, ch)
+  fillTransparentBg(ctx, width, height, cs)
+  drawSimpleCells(ctx, cells, cs)
+  drawSimpleGridLines(ctx, width, height, cs)
+  drawSimpleLabels(ctx, cells, colorStats, cs)
 
   // Watermark strip
-  drawWatermarkStrip(ctx, canvasW, height * cellSize, brand, width, height)
+  ctx.fillStyle = '#f8fafc'
+  ctx.fillRect(0, height * cs, cw, WM_H)
+  ctx.strokeStyle = 'rgba(0,0,0,0.10)'
+  ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(0, height * cs); ctx.lineTo(cw, height * cs); ctx.stroke()
+  const d = new Date().toISOString().slice(0, 10)
+  ctx.fillStyle = 'rgba(0,0,0,0.30)'
+  ctx.font = '13px sans-serif'
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+  ctx.fillText(`${brand} · ${width}×${height} 格 · ${d}`, 14, height * cs + WM_H / 2)
+  ctx.font = 'bold 13px sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillText('哆啦拼豆图纸库', cw - 14, height * cs + WM_H / 2)
 
-  const fileName = buildFileName(brand, width, height, 'png')
-  const dataUrl = canvas.toDataURL('image/png')
-  triggerDownload(dataUrl, fileName)
+  triggerDownload(canvas.toDataURL('image/png'), fileName)
 }

@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## v0.3.2 - 2026-06-03（专业图纸模板 + 颜色合并优化）
+
+### Added
+
+- **颜色数量控制**：新增 ColorControlPanel，可选 15/20/25/30 色或自定义（5-100）
+- **相近色合并**：实现 Median-Cut 色彩量化（`quantize.ts`），生成前将像素减少到目标颜色数，大幅减少碎色
+- **少量颜色自动合并**：实现低用量色号合并（`mergeColors.ts`），默认阈值 5 颗，用量低于阈值的颜色自动合并到最近色
+- **专业 PNG 图纸模板**（`drawPatternTemplate.ts`）：
+  - 顶部信息栏：品牌名（左）+ 作品名（右）+ 尺寸（中）
+  - 上下左右四向坐标刻度
+  - 每 10 格加粗分区线
+  - 每 26 格拼板边界线（蓝色辅助线）
+  - 格子内色号短编号
+  - 底部色卡图例（色块 + 短编号 + 品牌色号 + 备货量 + 克数）
+  - 底部统计栏（颜色种数、用豆、备货量、图纸尺寸、成品尺寸）
+  - 水印条
+- **导出模式选择**：简洁格子 / 专业图纸（ExportPanel 新增 toggle）
+- **作品名自动提取**：上传图片时从文件名提取作品名，传给专业模板
+- 切换颜色设置后自动重新生成（无需重新上传图片）
+
+### Changed
+
+- `src/App.tsx`：新增 maxColors、mergeThreshold、workTitle 状态；管线升级为量化→匹配→合并
+- `src/components/ExportPanel`：新增模式选择，传 workTitle 给导出函数
+- `src/lib/export/exportPng.ts`：新增 'professional' 模式，调用 drawPatternTemplate
+
+---
+
 ## v0.3.1 - 2026-06-03（图纸质量修复 + 真实色卡接入）
 
 ### Fixed（图纸质量修复）

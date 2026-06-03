@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { UploadPanel } from './components/UploadPanel'
 import { SettingsPanel } from './components/SettingsPanel'
+import { ColorControlPanel } from './components/ColorControlPanel'
 import { PreviewCanvas } from './components/PreviewCanvas'
 import { PalettePanel } from './components/PalettePanel'
 import { StatsPanel } from './components/StatsPanel'
@@ -12,22 +13,37 @@ import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
 import { extractPixels } from './lib/image/pixelate'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
+import { quantizeColors } from './lib/image/quantize'
+import { mergeLowUsageColors } from './lib/image/mergeColors'
 import { computeColorStats } from './lib/utils/stats'
 import { getPalette } from './data/palettes'
 import './index.css'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [workTitle, setWorkTitle] = useState('')
   const [width, setWidth] = useState(52)
   const [height, setHeight] = useState(52)
   const [brand, setBrand] = useState<BrandName>('MARD')
+  const [maxColors, setMaxColors] = useState(20)
+  const [mergeThreshold, setMergeThreshold] = useState(5)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
   const [patternData, setPatternData] = useState<PatternData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  function handleImageLoad(url: string) {
+  // Re-match when color settings change (if image is already generated)
+  useEffect(() => {
+    if (rawPixels && rawPixels.length > 0) {
+      runRematch(rawPixels, brand, width, height)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxColors, mergeThreshold])
+
+  function handleImageLoad(url: string, file: File) {
     setImageUrl(url)
+    // Use filename (minus extension) as default work title
+    setWorkTitle(file.name.replace(/\.[^.]+$/, ''))
     setRawPixels(null)
     setPatternData(null)
     setErrorMsg(null)
@@ -43,11 +59,21 @@ function App() {
   function handleBrandChange(newBrand: BrandName) {
     setBrand(newBrand)
     if (rawPixels && rawPixels.length > 0) {
-      rematchPalette(rawPixels, newBrand, width, height)
+      runRematch(rawPixels, newBrand, width, height)
     }
   }
 
-  function rematchPalette(
+  function handleMaxColorsChange(n: number) {
+    setMaxColors(n)
+    // useEffect handles re-match
+  }
+
+  function handleMergeThresholdChange(n: number) {
+    setMergeThreshold(n)
+    // useEffect handles re-match
+  }
+
+  function runRematch(
     pixels: PixelCell[],
     targetBrand: BrandName,
     w: number,
@@ -56,23 +82,41 @@ function App() {
     const palette = getPalette(targetBrand)
     const labCache = buildLabCache(palette)
 
-    let transparentCount = 0
+    // Separate transparent vs non-transparent
+    const nonTransparent = pixels.filter(px => !px.isTransparent)
+    const transparentCount = pixels.length - nonTransparent.length
 
-    const cells: PatternCell[] = pixels.map((px) => {
+    // Step 1: Median-cut quantization (reduces cardinality to maxColors)
+    const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
+    const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+
+    // Step 2: Match each cluster center to nearest palette color (at most maxColors matches)
+    const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+    for (const c of clusters) {
+      const key = c.join(',')
+      if (!clusterCache.has(key)) {
+        clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+      }
+    }
+
+    // Step 3: Build all cells using cluster assignments
+    let ntIdx = 0
+    let cells: PatternCell[] = pixels.map(px => {
       if (px.isTransparent) {
-        transparentCount++
         return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
       }
-      return {
-        row: px.y,
-        col: px.x,
-        isTransparent: false,
-        color: matchColor(px.r, px.g, px.b, palette, labCache),
-      }
+      const cluster = clusters[ntIdx++]
+      const color = clusterCache.get(cluster.join(','))!
+      return { row: px.y, col: px.x, isTransparent: false, color }
     })
 
+    // Step 4: Merge low-usage colors
+    if (mergeThreshold > 0) {
+      cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+    }
+
     const colorStats = computeColorStats(cells)
-    const beadCount = pixels.length - transparentCount
+    const beadCount = cells.filter(c => !c.isTransparent).length
 
     setPatternData({
       size: { width: w, height: h },
@@ -85,13 +129,9 @@ function App() {
   }
 
   async function generatePattern() {
-    if (!imageUrl) {
-      setErrorMsg('请先上传图片')
-      return
-    }
+    if (!imageUrl) { setErrorMsg('请先上传图片'); return }
     if (width < 1 || height < 1 || width > 500 || height > 500) {
-      setErrorMsg('请输入有效的宽高（1–500）')
-      return
+      setErrorMsg('请输入有效的宽高（1–500）'); return
     }
 
     setErrorMsg(null)
@@ -100,18 +140,11 @@ function App() {
 
     try {
       const img = await loadImage(imageUrl)
-
-      // Step 1: Auto-crop transparent border (removes empty frame, preserves content)
       const cropped = cropTransparentBorder(img)
-
-      // Step 2: Resize with contain mode (preserves aspect ratio, centers in canvas)
       const canvas = resizeWithContain(cropped, width, height)
-
-      // Step 3: Extract pixels, marking transparent cells
       const pixels = extractPixels(canvas)
-
       setRawPixels(pixels)
-      rematchPalette(pixels, brand, width, height)
+      runRematch(pixels, brand, width, height)
     } catch (err) {
       setErrorMsg('图片处理失败，请重试')
       console.error(err)
@@ -130,7 +163,7 @@ function App() {
           <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
           <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
         </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.3.1</span>
+        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.3.2</span>
       </header>
 
       {errorMsg && (
@@ -141,6 +174,7 @@ function App() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Left: Upload + Size + Color settings */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
           <UploadPanel onImageLoad={handleImageLoad} />
           <SettingsPanel
@@ -151,8 +185,15 @@ function App() {
             isGenerating={isGenerating}
             canGenerate={!!imageUrl}
           />
+          <ColorControlPanel
+            maxColors={maxColors}
+            mergeThreshold={mergeThreshold}
+            onMaxColorsChange={handleMaxColorsChange}
+            onMergeThresholdChange={handleMergeThresholdChange}
+          />
         </aside>
 
+        {/* Center: Preview */}
         <main className="flex-1 overflow-hidden p-4">
           <div className="bg-white rounded-xl border border-gray-200 h-full p-4 flex flex-col">
             <PreviewCanvas
@@ -164,6 +205,7 @@ function App() {
           </div>
         </main>
 
+        {/* Right: Brand + Stats + Export */}
         <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
           <PalettePanel selectedBrand={brand} onBrandChange={handleBrandChange} />
           <StatsPanel
@@ -175,6 +217,7 @@ function App() {
           <ExportPanel
             brand={brand}
             patternData={patternData}
+            workTitle={workTitle}
           />
         </aside>
       </div>
