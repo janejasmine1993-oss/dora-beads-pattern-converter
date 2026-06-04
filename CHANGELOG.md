@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## v0.4.0 - 2026-06-04（图纸编辑基础版）
+
+### Added
+
+**A 层：导入前预处理**
+- **裁剪功能**（`CropModal`）：上传图片后可打开裁剪弹窗，拖动裁剪框移动位置、拖动右下角调整大小，确认后更新图纸生成源图
+- **旋转 / 翻转**：左侧预处理区增加「左转 90°」「180°」「右转 90°」「水平翻转」「垂直翻转」按钮，操作直接作用于 imageUrl（Canvas 变换实现），不需重新上传
+
+**B 层：图纸编辑（操作全部作用于格子矩阵，统计实时同步）**
+- **编辑模式开关**：顶部 Header 新增「进入编辑」按钮，生成图纸后可切换到编辑模式；编辑模式下中间显示可交互的 `EditableCanvas`
+- **编辑工具栏**（`EditorToolbar`）：选区、吸色、画笔、橡皮、填充、删除填充 6 种工具；当前颜色预览；撤销/重做；缩放（1×~4×）
+- **吸色器**：点击格子读取品牌色号，同步设为当前颜色并高亮全图同色格子
+- **画笔**：点击/拖动绘制，支持镜像模式下的数据坐标转换
+- **橡皮**：点击/拖动擦除为透明格，不计入豆量
+- **填充**（BFS 同色联通填充）：点击区域用当前颜色填充同色联通区域
+- **删除填充**：BFS 模式将联通区域擦除为透明格
+- **矩形选区**：拖动框选，工具操作自动约束在选区内；支持反选（当前选区↔全图）、取消选区
+- **同色高亮**：吸色器选色后高亮同色格子，其余格子半透明（20% 不透明度）；编辑工具栏可一键清除高亮
+- **颜色替换**：快速色板悬停菜单 → 「替换颜色」→ 点击目标颜色完成全图替换
+- **一键删除某色**：快速色板悬停菜单 → 「删除此色」→ 全图删除（尊重选区）
+- **主体描边**：编辑模式下「描边主体（当前色）」按钮，在主体边缘透明格填充当前色
+- **撤销 / 重做**：历史栈最多 50 步，撤销/重做后预览、统计、导出全部同步
+- **缩放查看**：1× / 1.5× / 2× / 3× / 4× 五档，画布滚动容器自动处理大尺寸
+- **快速色板**（`QuickPalette`）：右侧面板显示当前品牌色卡，默认只显示已用色，可切换全色卡；支持搜索色号；点击选色；悬停菜单提供高亮/替换/删除
+- **编辑后实时统计同步**：每次编辑都重新计算 colorStats、beadCount、transparentCount 并更新 patternData，StatsPanel 和 ExportPanel 自动响应
+
+### Changed
+
+- `src/App.tsx`：新增 editMode、activeTool、activeColor、highlightColorCode、selection、fillThreshold、zoom、cellHistory 等编辑状态；`applyEdit()` 统一处理单次编辑（更新 patternData + 推入历史栈）
+- `src/components/UploadPanel/index.tsx`：接口不变，图片预处理按钮放在 App.tsx 的 aside 中
+- `src/components/EditableCanvas/index.tsx`（新）：Canvas 渲染 + 全部鼠标事件，支持所有编辑工具
+- `src/components/EditorToolbar/index.tsx`（新）：工具栏 UI
+- `src/components/QuickPalette/index.tsx`（新）：快速色板
+- `src/components/CropModal/index.tsx`（新）：裁剪弹窗
+- `src/lib/editor/types.ts`（新）：EditorTool、SelectionRect 类型
+- `src/lib/editor/history.ts`（新）：undo/redo 历史栈（最多 50 步）
+- `src/lib/editor/floodFill.ts`（新）：BFS 洪水填充
+- `src/lib/editor/operations.ts`（新）：paintCell、eraseCell、replaceColor、deleteColor、outlineBody
+- `src/lib/image/transform.ts`（新）：transformImage（5 种方向变换）、cropImage
+
+### Known Limitations（本版本已知限制）
+
+- 填充阈值当前为扩展步数（0=精确同色），仍基于色号精确匹配；Lab Delta-E 阈值可后续实现
+- 去背景（AI 背景抠图）未实现，预留接口位置
+- 项目状态本地保存（刷新恢复）未实现
+- 大尺寸图纸（256×256+）在 4× 缩放时画布可能超出屏幕
+
+---
+
 ## v0.3.6 - 2026-06-04（图纸水印、网格层级与透明区显示优化）
 
 ### Changed
