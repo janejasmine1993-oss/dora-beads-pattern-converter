@@ -16,7 +16,8 @@ interface EditableCanvasProps {
   selection: SelectionRect | null
   mirror: boolean
   zoom: number
-  showCellCodes?: boolean   // show/hide color code labels on cells
+  showCellCodes?: boolean
+  spacePanning?: boolean    // space key held — temporary grab/pan mode
   onCellsChange: (cells: PatternCell[]) => void
   onColorPick: (color: PaletteColor) => void
   onSelectionChange: (sel: SelectionRect | null) => void
@@ -28,14 +29,17 @@ function calcBaseCS(w: number, h: number) {
 
 export function EditableCanvas({
   patternData, activeTool, activeColor, highlightColorCode,
-  selection, mirror, zoom, showCellCodes = true,
+  selection, mirror, zoom, showCellCodes = true, spacePanning = false,
   onCellsChange, onColorPick, onSelectionChange,
 }: EditableCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hoverCell, setHoverCell] = useState<{ r: number; c: number } | null>(null)
   const isPainting = useRef(false)
   const isSelecting = useRef(false)
   const selStart = useRef<{ r: number; c: number } | null>(null)
+  // Pan state: tracks mouse start pos + container scroll start
+  const panStart = useRef<{ mx: number; my: number; sl: number; st: number } | null>(null)
 
   const { size: { width, height }, cells } = patternData
   const CS = Math.round(calcBaseCS(width, height) * zoom)
@@ -200,6 +204,12 @@ export function EditableCanvas({
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     if (e.button !== 0) return
+    // Space-pan mode: start panning the scroll container
+    if (spacePanning) {
+      const c = containerRef.current
+      if (c) panStart.current = { mx: e.clientX, my: e.clientY, sl: c.scrollLeft, st: c.scrollTop }
+      return
+    }
     const { r, c } = cellFromMouse(e)
     if (activeTool === 'select') {
       isSelecting.current = true
@@ -212,6 +222,17 @@ export function EditableCanvas({
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Space-pan mode: scroll the container
+    if (spacePanning) {
+      if (panStart.current) {
+        const c = containerRef.current
+        if (c) {
+          c.scrollLeft = panStart.current.sl - (e.clientX - panStart.current.mx)
+          c.scrollTop  = panStart.current.st - (e.clientY - panStart.current.my)
+        }
+      }
+      return
+    }
     const { r, c } = cellFromMouse(e)
     setHoverCell({ r, c })
 
@@ -230,18 +251,23 @@ export function EditableCanvas({
   }
 
   function handleMouseUp() {
+    panStart.current = null
     isPainting.current = false
     isSelecting.current = false
     selStart.current = null
   }
 
+  const cursor = spacePanning
+    ? (panStart.current ? 'grabbing' : 'grab')
+    : TOOL_CURSORS[activeTool]
+
   return (
-    <div className="overflow-auto flex-1 bg-gray-100 p-2 rounded-lg" style={{ minHeight: 0 }}>
+    <div ref={containerRef} className="overflow-auto flex-1 bg-gray-100 p-2 rounded-lg" style={{ minHeight: 0 }}>
       <canvas
         ref={canvasRef}
         style={{
           imageRendering: 'pixelated',
-          cursor: TOOL_CURSORS[activeTool],
+          cursor,
           display: 'block',
         }}
         onMouseDown={handleMouseDown}

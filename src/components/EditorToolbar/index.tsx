@@ -194,7 +194,7 @@ export function EditorToolbar({
       <div>
         <div className="flex items-center justify-between mb-1">
           <p className="text-xs text-gray-500">缩放</p>
-          <span className="text-[10px] text-gray-400">+/− 键</span>
+          <span className="text-[10px] text-gray-400">+/− 键 · 0 重置 · 空格平移</span>
         </div>
         <div className="flex gap-0.5">
           {ZOOM_LEVELS.map(z => (

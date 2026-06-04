@@ -63,6 +63,7 @@ function App() {
   const [mirror, setMirror] = useState(false)
   const [cellHistory, setCellHistory] = useState<CellHistory | null>(null)
   const [showCellCodes, setShowCellCodes] = useState(true)
+  const [spacePanning, setSpacePanning] = useState(false)
 
   // ── Re-match when color-count settings change ───────────────────────────────
   useEffect(() => {
@@ -275,10 +276,37 @@ function App() {
       if (e.key === '-') {
         e.preventDefault()
         setZoom(prev => { const l = ZOOM_KBD.filter(z => z < prev); return l.length ? l[l.length - 1] : prev })
+        return
+      }
+      // Reset zoom to 1× (fit view)
+      if (e.key === '0') {
+        e.preventDefault()
+        setZoom(1)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [editMode])
+
+  // ── Space key: hold to temporarily use grab/pan tool ────────────────────────
+  useEffect(() => {
+    if (!editMode) { setSpacePanning(false); return }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code !== 'Space' || e.repeat) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      setSpacePanning(true)
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code === 'Space') setSpacePanning(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
   }, [editMode])
 
   // ── Color operations ────────────────────────────────────────────────────────
@@ -491,6 +519,7 @@ function App() {
                   onColorPick={handleColorPick}
                   onSelectionChange={setSelection}
                   showCellCodes={showCellCodes}
+                  spacePanning={spacePanning}
                 />
               ) : (
                 <PreviewCanvas

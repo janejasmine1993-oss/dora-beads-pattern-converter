@@ -229,8 +229,8 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
     ctx.textBaseline = 'middle'
     ctx.translate(gridX + gridW / 2, gridY + gridH / 2)
     ctx.rotate(-Math.PI / 6)
-    const tileW = 130
-    const tileH = 75
+    const tileW = 260   // doubled spacing — half the density
+    const tileH = 150
     const span = Math.ceil(Math.max(gridW, gridH) * 0.8)
     const tCols = Math.ceil(span / tileW) + 2
     const tRows = Math.ceil(span / tileH) + 2
