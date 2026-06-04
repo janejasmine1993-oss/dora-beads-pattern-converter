@@ -23,6 +23,9 @@ interface EditorToolbarProps {
   onHighlightActiveColor: () => void
   onStartReplaceActiveColor: () => void
   onDeleteActiveColor: () => void
+  // Display options
+  showCellCodes: boolean
+  onToggleCellCodes: () => void
 }
 
 const TOOLS: EditorTool[] = ['select', 'eyedropper', 'brush', 'eraser', 'fill', 'fill-erase']
@@ -47,6 +50,7 @@ export function EditorToolbar({
   onClearHighlight,
   hasSelection, onClearSelection, onInvertSelection,
   onHighlightActiveColor, onStartReplaceActiveColor, onDeleteActiveColor,
+  showCellCodes, onToggleCellCodes,
 }: EditorToolbarProps) {
   return (
     <div className="space-y-3">
@@ -167,23 +171,31 @@ export function EditorToolbar({
         </div>
       )}
 
-      {/* Undo / Redo */}
-      <div className="flex gap-1">
-        <button onClick={onUndo} disabled={!canUndo}
-          className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-            canUndo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
-          }`}
-        >↩ 撤销</button>
-        <button onClick={onRedo} disabled={!canRedo}
-          className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-            canRedo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
-          }`}
-        >↪ 重做</button>
+      {/* Undo / Redo with shortcut hint */}
+      <div className="space-y-0.5">
+        <div className="flex gap-1">
+          <button onClick={onUndo} disabled={!canUndo}
+            className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
+              canUndo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
+            }`}
+          >↩ 撤销</button>
+          <button onClick={onRedo} disabled={!canRedo}
+            className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
+              canRedo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
+            }`}
+          >↪ 重做</button>
+        </div>
+        <p className="text-[10px] text-gray-400 text-center">
+          Ctrl+Z / Ctrl+Y（Mac: ⌘Z / ⌘Y）
+        </p>
       </div>
 
-      {/* Zoom */}
+      {/* Zoom with shortcut hint */}
       <div>
-        <p className="text-xs text-gray-500 mb-1">缩放</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-gray-500">缩放</p>
+          <span className="text-[10px] text-gray-400">+/− 键</span>
+        </div>
         <div className="flex gap-0.5">
           {ZOOM_LEVELS.map(z => (
             <button key={z} onClick={() => onZoomChange(z)}
@@ -197,6 +209,21 @@ export function EditorToolbar({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Display options */}
+      <div>
+        <p className="text-xs text-gray-500 mb-1">显示选项</p>
+        <button
+          onClick={onToggleCellCodes}
+          className={`w-full py-1.5 text-xs rounded border transition-colors ${
+            showCellCodes
+              ? 'bg-blue-50 border-blue-400 text-blue-700'
+              : 'border-gray-300 text-gray-500 hover:border-blue-400'
+          }`}
+        >
+          {showCellCodes ? '色号标注：显示' : '色号标注：隐藏'}
+        </button>
       </div>
     </div>
   )

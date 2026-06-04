@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { UploadPanel } from './components/UploadPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ColorControlPanel } from './components/ColorControlPanel'
@@ -62,6 +62,7 @@ function App() {
   const [zoom, setZoom] = useState(1)
   const [mirror, setMirror] = useState(false)
   const [cellHistory, setCellHistory] = useState<CellHistory | null>(null)
+  const [showCellCodes, setShowCellCodes] = useState(true)
 
   // ── Re-match when color-count settings change ───────────────────────────────
   useEffect(() => {
@@ -70,6 +71,7 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxColors, mergeThreshold])
+
 
   // ── Image upload ────────────────────────────────────────────────────────────
   function handleImageLoad(url: string, file: File) {
@@ -244,6 +246,41 @@ function App() {
     setCellHistory(newH); restoreCells(cells)
   }
 
+  // ── Keyboard shortcuts (edit mode only) ─────────────────────────────────────
+  // Refs always point to the latest undo/redo so the stable effect sees fresh state
+  const undoRef = useRef(handleUndo)
+  const redoRef = useRef(handleRedo)
+  undoRef.current = handleUndo
+  redoRef.current = handleRedo
+
+  useEffect(() => {
+    const ZOOM_KBD = [1, 1.5, 2, 3, 4]
+    function onKeyDown(e: KeyboardEvent) {
+      if (!editMode) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform)
+      const ctrl = isMac ? e.metaKey : e.ctrlKey
+      if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault(); undoRef.current(); return
+      }
+      if (ctrl && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
+        e.preventDefault(); redoRef.current(); return
+      }
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        setZoom(prev => { const h = ZOOM_KBD.filter(z => z > prev); return h.length ? h[0] : prev })
+        return
+      }
+      if (e.key === '-') {
+        e.preventDefault()
+        setZoom(prev => { const l = ZOOM_KBD.filter(z => z < prev); return l.length ? l[l.length - 1] : prev })
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [editMode])
+
   // ── Color operations ────────────────────────────────────────────────────────
 
   function handleOutlineBody(color: PaletteColor) {
@@ -406,6 +443,8 @@ function App() {
                 onHighlightActiveColor={handleHighlightActiveColor}
                 onStartReplaceActiveColor={handleStartReplaceActiveColor}
                 onDeleteActiveColor={handleDeleteActiveColor}
+                showCellCodes={showCellCodes}
+                onToggleCellCodes={() => setShowCellCodes(v => !v)}
               />
               {activeColor && (
                 <button
@@ -451,6 +490,7 @@ function App() {
                   onCellsChange={applyEdit}
                   onColorPick={handleColorPick}
                   onSelectionChange={setSelection}
+                  showCellCodes={showCellCodes}
                 />
               ) : (
                 <PreviewCanvas

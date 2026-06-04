@@ -16,6 +16,7 @@ interface EditableCanvasProps {
   selection: SelectionRect | null
   mirror: boolean
   zoom: number
+  showCellCodes?: boolean   // show/hide color code labels on cells
   onCellsChange: (cells: PatternCell[]) => void
   onColorPick: (color: PaletteColor) => void
   onSelectionChange: (sel: SelectionRect | null) => void
@@ -27,7 +28,7 @@ function calcBaseCS(w: number, h: number) {
 
 export function EditableCanvas({
   patternData, activeTool, activeColor, highlightColorCode,
-  selection, mirror, zoom,
+  selection, mirror, zoom, showCellCodes = true,
   onCellsChange, onColorPick, onSelectionChange,
 }: EditableCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -102,8 +103,8 @@ export function EditableCanvas({
       ctx.beginPath(); ctx.moveTo(0, y * CS); ctx.lineTo(logW, y * CS); ctx.stroke()
     }
 
-    // 5. Cell labels (only when CS large enough)
-    if (CS >= 16) {
+    // 5. Cell labels — controlled by showCellCodes prop; fallback threshold at CS>=8
+    if (showCellCodes && CS >= 8) {
       const fs = Math.max(6, Math.floor(CS * 0.32))
       ctx.font = `bold ${fs}px ${FF_MONO}`
       ctx.textAlign = 'center'
@@ -147,7 +148,7 @@ export function EditableCanvas({
       ctx.lineWidth = 2
       ctx.strokeRect(hoverCell.c * CS + 1, hoverCell.r * CS + 1, CS - 2, CS - 2)
     }
-  }, [cells, width, height, CS, mirror, highlightColorCode, selection, hoverCell])
+  }, [cells, width, height, CS, mirror, highlightColorCode, selection, hoverCell, showCellCodes])
 
   function cellFromMouse(e: React.MouseEvent<HTMLCanvasElement>) {
     const rect = canvasRef.current!.getBoundingClientRect()
