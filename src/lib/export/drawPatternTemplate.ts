@@ -195,32 +195,52 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
     : `图纸 ${width}×${height} 格`
   ctx.fillText(dimHint, canvasW - gridX, ty + TITLE_H * 0.72)
 
-  // ── 3. Fill cells (mirror: visual col reads from mirrored source col) ──────
+  // ── 3. Fill non-transparent cells — transparent cells keep white background ──
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const srcCol = mirror ? (width - 1 - col) : col
       const cell = cellLookup.get(row * width + srcCol)
-      const x = gridX + col * CS
-      const y = gridY + row * CS
-      ctx.fillStyle = (!cell || cell.isTransparent)
-        ? ((row + col) % 2 === 0 ? '#ededed' : '#e2e2e2')
-        : cell.color.hex
-      ctx.fillRect(x, y, CS, CS)
+      if (!cell || cell.isTransparent) continue  // white bg shows through + grid lines visible
+      ctx.fillStyle = cell.color.hex
+      ctx.fillRect(gridX + col * CS, gridY + row * CS, CS, CS)
     }
   }
 
-  // ── 4. Grid lines ──────────────────────────────────────────────────────────
-  // Fine lines: every cell (subtle)
+  // ── 4. Grid lines (3-level hierarchy) ─────────────────────────────────────
+  // Level 1 — fine lines every cell; visible on both colored and transparent areas
   for (let x = 0; x <= width; x++)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(0,0,0,0.10)', 0.5)
   for (let y = 0; y <= height; y++) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(0,0,0,0.10)', 0.5)
 
-  // Major lines: every 10 cells (darker, slightly thicker — clear zone marker)
-  for (let x = 10; x < width; x += 10)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(80,8,8,0.36)', 1.8)
-  for (let y = 10; y < height; y += 10) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(80,8,8,0.36)', 1.8)
+  // Level 2 — 10-grid dividers; neutral dark gray, clearly more prominent
+  for (let x = 10; x < width; x += 10)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(30,30,30,0.32)', 1.6)
+  for (let y = 10; y < height; y += 10) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(30,30,30,0.32)', 1.6)
+  // (Level 3 = outer border, drawn in step 6 with wine-red, most prominent)
 
-  // Board section lines: every 26 cells (blue guide)
-  for (let x = 26; x < width; x += 26)  drawVLine(ctx, gridX + x * CS, gridY, gridH, 'rgba(70,100,230,0.45)', 1.8)
-  for (let y = 26; y < height; y += 26) drawHLine(ctx, gridX, gridY + y * CS, gridW, 'rgba(70,100,230,0.45)', 1.8)
+  // ── 4b. Diagonal watermark over grid area (behind labels, very low opacity) ─
+  {
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(gridX, gridY, gridW, gridH)
+    ctx.clip()
+    ctx.globalAlpha = 0.055
+    ctx.fillStyle = WINE
+    ctx.font = `bold 13px ${FF}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.translate(gridX + gridW / 2, gridY + gridH / 2)
+    ctx.rotate(-Math.PI / 6)
+    const tileW = 130
+    const tileH = 75
+    const span = Math.ceil(Math.max(gridW, gridH) * 0.8)
+    const tCols = Math.ceil(span / tileW) + 2
+    const tRows = Math.ceil(span / tileH) + 2
+    for (let r = -tRows; r <= tRows; r++) {
+      for (let c = -tCols; c <= tCols; c++) {
+        ctx.fillText('哆啦拼豆图纸', c * tileW, r * tileH)
+      }
+    }
+    ctx.restore()
+  }
 
   // ── 5. Color labels — text always readable (mirrored position, normal text) ─
   if (CS >= 10) {
@@ -394,8 +414,8 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   ctx.fillRect(0, wmY, canvasW, WM_H)
   drawHLine(ctx, 0, wmY, canvasW, WINE_BORDER, 0.5)
 
-  ctx.fillStyle = `${WINE}88`
-  ctx.font = `11px ${FF}`
+  ctx.fillStyle = `${WINE}cc`  // 80% opacity — clear brand credit
+  ctx.font = `bold 11px ${FF}`
   ctx.textAlign = 'right'
   ctx.textBaseline = 'middle'
   ctx.fillText(`哆啦拼豆图纸 · ${date}`, canvasW - MH, wmY + WM_H / 2)
