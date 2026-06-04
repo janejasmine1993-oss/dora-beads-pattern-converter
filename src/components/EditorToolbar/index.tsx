@@ -6,6 +6,7 @@ interface EditorToolbarProps {
   activeTool: EditorTool
   onToolChange: (t: EditorTool) => void
   activeColor: PaletteColor | null
+  highlightColorCode: string | null
   fillThreshold: number
   onFillThresholdChange: (v: number) => void
   zoom: number
@@ -14,18 +15,21 @@ interface EditorToolbarProps {
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
-  highlightColorCode: string | null
   onClearHighlight: () => void
   onClearSelection: () => void
   hasSelection: boolean
   onInvertSelection: () => void
+  // Color quick-actions (applied to activeColor)
+  onHighlightActiveColor: () => void
+  onStartReplaceActiveColor: () => void
+  onDeleteActiveColor: () => void
 }
 
 const TOOLS: EditorTool[] = ['select', 'eyedropper', 'brush', 'eraser', 'fill', 'fill-erase']
 
 const TOOL_ICONS: Record<EditorTool, string> = {
   select: '⬚',
-  eyedropper: '🔬',
+  eyedropper: '💉',
   brush: '✏️',
   eraser: '⬜',
   fill: '🪣',
@@ -36,12 +40,13 @@ const ZOOM_LEVELS = [1, 1.5, 2, 3, 4]
 
 export function EditorToolbar({
   activeTool, onToolChange,
-  activeColor,
+  activeColor, highlightColorCode,
   fillThreshold, onFillThresholdChange,
   zoom, onZoomChange,
   canUndo, canRedo, onUndo, onRedo,
-  highlightColorCode, onClearHighlight,
+  onClearHighlight,
   hasSelection, onClearSelection, onInvertSelection,
+  onHighlightActiveColor, onStartReplaceActiveColor, onDeleteActiveColor,
 }: EditorToolbarProps) {
   return (
     <div className="space-y-3">
@@ -66,23 +71,69 @@ export function EditorToolbar({
         ))}
       </div>
 
-      {/* Active color indicator */}
-      <div className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5">
-        <span className="text-xs text-gray-500 shrink-0">当前颜色</span>
-        {activeColor ? (
-          <>
-            <div
-              className="w-5 h-5 rounded border border-gray-200 shrink-0"
-              style={{ backgroundColor: activeColor.hex }}
-            />
-            <span className="text-xs font-mono text-gray-700 truncate">{activeColor.code}</span>
-          </>
-        ) : (
-          <span className="text-xs text-gray-400">未选择</span>
+      {/* Current color + quick actions */}
+      <div className="bg-gray-50 rounded border border-gray-200 p-2 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 shrink-0">当前颜色</span>
+          {activeColor ? (
+            <>
+              <div
+                className="w-6 h-6 rounded border border-gray-300 shrink-0"
+                style={{ backgroundColor: activeColor.hex }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-mono text-gray-800 truncate">{activeColor.code}</p>
+                {activeColor.name !== activeColor.code && (
+                  <p className="text-[10px] text-gray-400 truncate">{activeColor.name}</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">未选择（用吸色器或色板选择）</span>
+          )}
+        </div>
+
+        {/* Quick actions — only when a color is selected */}
+        {activeColor && (
+          <div className="flex gap-1">
+            <button
+              onClick={onHighlightActiveColor}
+              title="高亮全图该颜色所有格子"
+              className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
+                highlightColorCode === activeColor.code
+                  ? 'bg-yellow-400 text-yellow-900 border-yellow-400'
+                  : 'border-gray-300 text-gray-600 hover:border-yellow-400 hover:text-yellow-700'
+              }`}
+            >
+              {highlightColorCode === activeColor.code ? '✦ 高亮中' : '◈ 高亮'}
+            </button>
+            <button
+              onClick={onStartReplaceActiveColor}
+              title="将全图该颜色替换为另一颜色"
+              className="flex-1 py-1 text-[10px] rounded border border-gray-300 text-gray-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
+            >
+              ⇄ 替换
+            </button>
+            <button
+              onClick={onDeleteActiveColor}
+              title="删除全图该颜色（可撤销）"
+              className="flex-1 py-1 text-[10px] rounded border border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600 transition-colors"
+            >
+              ✕ 删除
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Fill threshold (only for fill tools) */}
+      {/* Highlight banner */}
+      {highlightColorCode && (
+        <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
+          <span className="text-xs text-yellow-800 font-medium">高亮: {highlightColorCode}</span>
+          <button onClick={onClearHighlight} className="text-yellow-600 hover:text-yellow-800 text-xs">✕ 清除</button>
+        </div>
+      )}
+
+      {/* Fill threshold */}
       {(activeTool === 'fill' || activeTool === 'fill-erase') && (
         <div>
           <p className="text-xs text-gray-500 mb-1">
@@ -92,11 +143,7 @@ export function EditorToolbar({
             </span>
           </p>
           <input
-            type="range"
-            min={0}
-            max={3}
-            step={1}
-            value={fillThreshold}
+            type="range" min={0} max={3} step={1} value={fillThreshold}
             onChange={e => onFillThresholdChange(Number(e.target.value))}
             className="w-full"
           />
@@ -106,48 +153,30 @@ export function EditorToolbar({
         </div>
       )}
 
-      {/* Highlighted color */}
-      {highlightColorCode && (
-        <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
-          <span className="text-xs text-yellow-800">高亮: {highlightColorCode}</span>
-          <button onClick={onClearHighlight} className="text-yellow-600 hover:text-yellow-800 text-xs">✕ 清除</button>
-        </div>
-      )}
-
       {/* Selection */}
       {hasSelection && (
-        <div className="space-y-1">
-          <div className="flex gap-1">
-            <button
-              onClick={onInvertSelection}
-              className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-blue-400 hover:text-blue-600"
-            >反选</button>
-            <button
-              onClick={onClearSelection}
-              className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-red-400 hover:text-red-600"
-            >取消选区</button>
-          </div>
+        <div className="flex gap-1">
+          <button
+            onClick={onInvertSelection}
+            className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-blue-400 hover:text-blue-600"
+          >反选</button>
+          <button
+            onClick={onClearSelection}
+            className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-red-400 hover:text-red-600"
+          >取消选区</button>
         </div>
       )}
 
       {/* Undo / Redo */}
       <div className="flex gap-1">
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
+        <button onClick={onUndo} disabled={!canUndo}
           className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-            canUndo
-              ? 'border-gray-300 hover:border-blue-400 text-gray-700'
-              : 'border-gray-200 text-gray-300 cursor-not-allowed'
+            canUndo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
           }`}
         >↩ 撤销</button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
+        <button onClick={onRedo} disabled={!canRedo}
           className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-            canRedo
-              ? 'border-gray-300 hover:border-blue-400 text-gray-700'
-              : 'border-gray-200 text-gray-300 cursor-not-allowed'
+            canRedo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
           }`}
         >↪ 重做</button>
       </div>
@@ -157,9 +186,7 @@ export function EditorToolbar({
         <p className="text-xs text-gray-500 mb-1">缩放</p>
         <div className="flex gap-0.5">
           {ZOOM_LEVELS.map(z => (
-            <button
-              key={z}
-              onClick={() => onZoomChange(z)}
+            <button key={z} onClick={() => onZoomChange(z)}
               className={`flex-1 py-1 text-[11px] rounded border transition-colors ${
                 zoom === z
                   ? 'bg-blue-500 text-white border-blue-500'

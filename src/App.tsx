@@ -245,22 +245,38 @@ function App() {
   }
 
   // ── Color operations ────────────────────────────────────────────────────────
-  function handleDeleteColor(code: string) {
-    if (!patternData) return
-    applyEdit(deleteColor(patternData.cells, code, selection ?? undefined))
-  }
 
   function handleOutlineBody(color: PaletteColor) {
     if (!patternData) return
     applyEdit(outlineBody(patternData.cells, width, height, color))
   }
 
-  // ── Eyedropper pick: set paint color, source color, highlight, switch to brush
+  // ── Eyedropper pick: ONLY sets paint color + switches to brush
+  // Highlight and replace are EXPLICIT separate actions, NOT automatic
   function handleColorPick(color: PaletteColor) {
     setActiveColor(color)
-    setPickedSourceColor(color)
-    setHighlightColorCode(color.code)
-    setActiveTool('brush')  // return to canvas-edit state after picking
+    setPickedSourceColor(null)     // don't enter replace mode automatically
+    setHighlightColorCode(null)    // don't auto-highlight — user can do it explicitly
+    setActiveTool('brush')
+  }
+
+  // ── Color quick-actions triggered from toolbar buttons ─────────────────────
+  function handleHighlightActiveColor() {
+    if (!activeColor) return
+    // Toggle highlight: if already highlighting this color, clear it
+    setHighlightColorCode(prev => prev === activeColor.code ? null : activeColor.code)
+  }
+
+  function handleStartReplaceActiveColor() {
+    if (!activeColor) return
+    // Enter replace mode: user is prompted to pick a target color
+    setPickedSourceColor(activeColor)
+    setHighlightColorCode(activeColor.code)  // highlight source to confirm visually
+  }
+
+  function handleDeleteActiveColor() {
+    if (!activeColor || !patternData) return
+    applyEdit(deleteColor(patternData.cells, activeColor.code, selection ?? undefined))
   }
 
   // ── Replace confirm flow ────────────────────────────────────────────────────
@@ -374,6 +390,7 @@ function App() {
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 activeColor={activeColor}
+                highlightColorCode={highlightColorCode}
                 fillThreshold={fillThreshold}
                 onFillThresholdChange={setFillThreshold}
                 zoom={zoom}
@@ -382,11 +399,13 @@ function App() {
                 canRedo={cellHistory ? canRedo(cellHistory) : false}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
-                highlightColorCode={highlightColorCode}
                 onClearHighlight={() => { setHighlightColorCode(null); setPickedSourceColor(null) }}
                 hasSelection={!!selection}
                 onClearSelection={() => setSelection(null)}
                 onInvertSelection={handleInvertSelection}
+                onHighlightActiveColor={handleHighlightActiveColor}
+                onStartReplaceActiveColor={handleStartReplaceActiveColor}
+                onDeleteActiveColor={handleDeleteActiveColor}
               />
               {activeColor && (
                 <button
@@ -458,11 +477,8 @@ function App() {
               pickedSourceColor={pickedSourceColor}
               highlightColorCode={highlightColorCode}
               onSelectColor={setActiveColor}
-              onHighlightColor={setHighlightColorCode}
               onRequestReplace={handleRequestReplace}
               onClearPickedSource={() => { setPickedSourceColor(null); setHighlightColorCode(null) }}
-              onSetPickedSource={(c) => { setPickedSourceColor(c); setHighlightColorCode(c.code) }}
-              onDeleteColor={handleDeleteColor}
               usedCodes={usedCodes}
             />
           )}
