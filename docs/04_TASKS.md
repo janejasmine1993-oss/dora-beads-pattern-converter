@@ -79,6 +79,18 @@
 - [x] 水印条升级（靛蓝配色）
 - [x] 修复 TS6196 构建错误（移除未使用的 ColorStat 导入）
 
+## v0.4.1 任务（已完成）
+
+- [x] 上传后自动弹出裁剪框
+- [x] 裁剪框 9 种比例预设（含"自由"和"原比例"）
+- [x] 比例锁定：拖动右下角时保持像素宽高比
+- [x] 翻转后自动重新生成（generatePatternFromUrl 解耦）
+- [x] 编辑入口移至预览区右上角绝对定位按钮
+- [x] 吸色后自动切换到画笔工具
+- [x] 状态分离：activeColor（画笔）与 pickedSourceColor（替换来源）独立
+- [x] 颜色替换确认弹窗（来源→目标，全图/选区范围说明）
+- [x] QuickPalette 替换模式横幅 + onSetPickedSource / onRequestReplace 接口
+
 ## v0.4.0 任务（已完成）
 
 ### A 层：导入前预处理

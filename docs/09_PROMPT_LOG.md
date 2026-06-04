@@ -1,5 +1,25 @@
 # Prompt Log
 
+## 2026-06-04 第 10 轮指令（v0.4.1 编辑器交互修正与颜色替换流程优化）
+
+### 目标
+
+修正 v0.4.0 编辑器交互问题：自动裁剪、比例预设、翻转即时生效、编辑入口优化、吸色回流、颜色替换确认弹窗。
+
+### 结果
+
+- CropModal 完全重写：9 种比例预设，锁比例拖动，自动居中，跳过按钮
+- 上传后自动弹出裁剪框（handleImageLoad → setShowCropModal(true)）
+- 翻转后自动重新生成（generatePatternFromUrl 解耦 + handleTransformImage 调用）
+- 编辑入口移至预览区右上角，Header 不再有编辑按钮
+- 吸色后自动切换画笔（handleColorPick 调用 setActiveTool('brush')）
+- 状态分离：activeColor vs pickedSourceColor
+- 颜色替换确认弹窗：来源→目标色块显示 + 范围说明 + 撤销支持
+- QuickPalette 替换模式横幅 + 新 props 接口
+- 构建通过，版本推进至 v0.4.1
+
+---
+
 ## 2026-06-04 第 9 轮指令（v0.4.0 图纸编辑基础版）
 
 ### 目标

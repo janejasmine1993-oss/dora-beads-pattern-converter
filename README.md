@@ -1,6 +1,6 @@
 # 哆啦拼豆图纸转换器 (dora-beads-pattern-converter)
 
-**当前版本：v0.4.0** | **线上地址：[dora-beads-pattern-converter.pages.dev](https://dora-beads-pattern-converter.pages.dev)**
+**当前版本：v0.4.1** | **线上地址：[dora-beads-pattern-converter.pages.dev](https://dora-beads-pattern-converter.pages.dev)**
 
 ## 项目简介
 

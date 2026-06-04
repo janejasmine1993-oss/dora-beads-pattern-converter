@@ -10,8 +10,7 @@ import { PalettePanel } from './components/PalettePanel'
 import { StatsPanel } from './components/StatsPanel'
 import { ExportPanel } from './components/ExportPanel'
 import { CropModal } from './components/CropModal'
-import type { BrandName } from './types/palette'
-import type { PaletteColor } from './types/palette'
+import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
@@ -32,7 +31,7 @@ import type { EditorTool, SelectionRect } from './lib/editor/types'
 import './index.css'
 
 function App() {
-  // ── Image / preprocessing ───────────────────────────────────────────────────
+  // ── Image ───────────────────────────────────────────────────────────────────
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [workTitle, setWorkTitle] = useState('')
   const [showCropModal, setShowCropModal] = useState(false)
@@ -51,7 +50,12 @@ function App() {
   // ── Edit mode ───────────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false)
   const [activeTool, setActiveTool] = useState<EditorTool>('brush')
+  // Paint color (brush) — distinct from source color being replaced
   const [activeColor, setActiveColor] = useState<PaletteColor | null>(null)
+  // Source color selected by eyedropper / "替换颜色…" menu — waiting for replacement target
+  const [pickedSourceColor, setPickedSourceColor] = useState<PaletteColor | null>(null)
+  // Replace confirmation dialog state
+  const [replaceConfirm, setReplaceConfirm] = useState<{ from: PaletteColor; to: PaletteColor } | null>(null)
   const [highlightColorCode, setHighlightColorCode] = useState<string | null>(null)
   const [selection, setSelection] = useState<SelectionRect | null>(null)
   const [fillThreshold, setFillThreshold] = useState(0)
@@ -59,7 +63,7 @@ function App() {
   const [mirror, setMirror] = useState(false)
   const [cellHistory, setCellHistory] = useState<CellHistory | null>(null)
 
-  // ── Re-match on color settings change ──────────────────────────────────────
+  // ── Re-match when color-count settings change ───────────────────────────────
   useEffect(() => {
     if (rawPixels && rawPixels.length > 0) {
       runRematch(rawPixels, brand, width, height)
@@ -67,7 +71,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxColors, mergeThreshold])
 
-  // ── Image handlers ──────────────────────────────────────────────────────────
+  // ── Image upload ────────────────────────────────────────────────────────────
   function handleImageLoad(url: string, file: File) {
     setImageUrl(url)
     setWorkTitle(file.name.replace(/\.[^.]+$/, ''))
@@ -76,20 +80,8 @@ function App() {
     setEditMode(false)
     setErrorMsg(null)
     setCellHistory(null)
-  }
-
-  async function handleTransformImage(op: ImageTransformOp) {
-    if (!imageUrl) return
-    try {
-      const newUrl = await transformImage(imageUrl, op)
-      setImageUrl(newUrl)
-      setRawPixels(null)
-      setPatternData(null)
-      setEditMode(false)
-      setCellHistory(null)
-    } catch (e) {
-      console.error(e)
-    }
+    setPickedSourceColor(null)
+    setShowCropModal(true)  // Auto-open crop after upload
   }
 
   function handleCropConfirm(croppedUrl: string) {
@@ -101,74 +93,42 @@ function App() {
     setCellHistory(null)
   }
 
-  // ── Pattern generation ──────────────────────────────────────────────────────
-  function handleSizeChange(w: number, h: number) {
-    setWidth(w)
-    setHeight(h)
-    setRawPixels(null)
-    setPatternData(null)
-    setEditMode(false)
-    setCellHistory(null)
+  function handleCropSkip() {
+    setShowCropModal(false)
+    // imageUrl already set from upload — no change needed
   }
 
-  function handleBrandChange(newBrand: BrandName) {
-    setBrand(newBrand)
-    if (rawPixels && rawPixels.length > 0) {
-      runRematch(rawPixels, newBrand, width, height)
+  // ── Image transforms (rotate / flip) — auto-regenerate if pattern existed ──
+  async function handleTransformImage(op: ImageTransformOp) {
+    if (!imageUrl) return
+    const hadPattern = !!rawPixels
+    try {
+      const newUrl = await transformImage(imageUrl, op)
+      setImageUrl(newUrl)
+      if (hadPattern) {
+        // Re-generate with new image, no manual button press needed
+        await generatePatternFromUrl(newUrl)
+      } else {
+        setRawPixels(null)
+        setPatternData(null)
+        setEditMode(false)
+        setCellHistory(null)
+      }
+    } catch (e) {
+      console.error('Transform failed', e)
     }
   }
 
-  function runRematch(pixels: PixelCell[], targetBrand: BrandName, w: number, h: number) {
-    const palette = getPalette(targetBrand)
-    const labCache = buildLabCache(palette)
-    const nonTransparent = pixels.filter(px => !px.isTransparent)
-    const transparentCount = pixels.length - nonTransparent.length
-    const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
-    const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
-    const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
-    for (const c of clusters) {
-      const key = c.join(',')
-      if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
-    }
-    let ntIdx = 0
-    let cells: PatternCell[] = pixels.map(px => {
-      if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-      const cluster = clusters[ntIdx++]
-      const color = clusterCache.get(cluster.join(','))!
-      return { row: px.y, col: px.x, isTransparent: false, color }
-    })
-    if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
-    applyCellsToState(cells, { size: { width: w, height: h }, rawPixels: pixels, beadCount: 0, transparentCount, colorStats: [], cells: [] }, transparentCount)
-  }
-
-  function applyCellsToState(cells: PatternCell[], base: Partial<PatternData>, transparentCount: number) {
-    const colorStats = computeColorStats(cells)
-    const beadCount = cells.filter(c => !c.isTransparent).length
-    const tc = transparentCount ?? cells.filter(c => c.isTransparent).length
-    const newData: PatternData = {
-      size: base.size ?? patternData!.size,
-      rawPixels: base.rawPixels ?? patternData!.rawPixels,
-      cells,
-      colorStats,
-      beadCount,
-      transparentCount: tc,
-    }
-    setPatternData(newData)
-    return newData
-  }
-
-  async function generatePattern() {
-    if (!imageUrl) { setErrorMsg('请先上传图片'); return }
-    if (width < 1 || height < 1 || width > 500 || height > 500) {
-      setErrorMsg('请输入有效的宽高（1–500）'); return
-    }
+  // ── Core generate function (accepts URL to avoid stale-state issue) ─────────
+  async function generatePatternFromUrl(url: string) {
+    if (!url || width < 1 || height < 1 || width > 500 || height > 500) return
     setErrorMsg(null)
     setIsGenerating(true)
     setPatternData(null)
     setEditMode(false)
     setCellHistory(null)
     try {
-      const img = await loadImage(imageUrl)
+      const img = await loadImage(url)
       const cropped = cropTransparentBorder(img)
       const canvas = resizeWithContain(cropped, width, height)
       const pixels = extractPixels(canvas)
@@ -194,8 +154,7 @@ function App() {
       if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length
-      const newData: PatternData = { size: { width, height }, cells, rawPixels: pixels, colorStats, beadCount, transparentCount }
-      setPatternData(newData)
+      setPatternData({ size: { width, height }, cells, rawPixels: pixels, colorStats, beadCount, transparentCount })
       setCellHistory(historyCreate(cells))
     } catch (err) {
       setErrorMsg('图片处理失败，请重试')
@@ -205,7 +164,57 @@ function App() {
     }
   }
 
-  // ── Edit operations (with stats sync + history) ─────────────────────────────
+  async function generatePattern() {
+    if (!imageUrl) { setErrorMsg('请先上传图片'); return }
+    await generatePatternFromUrl(imageUrl)
+  }
+
+  // ── Rematch on brand/color-count change ─────────────────────────────────────
+  function runRematch(pixels: PixelCell[], targetBrand: BrandName, w: number, h: number) {
+    const palette = getPalette(targetBrand)
+    const labCache = buildLabCache(palette)
+    const nonTransparent = pixels.filter(px => !px.isTransparent)
+    const transparentCount = pixels.length - nonTransparent.length
+    const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
+    const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+    const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+    for (const c of clusters) {
+      const key = c.join(',')
+      if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+    }
+    let ntIdx = 0
+    let cells: PatternCell[] = pixels.map(px => {
+      if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+      const cluster = clusters[ntIdx++]
+      const color = clusterCache.get(cluster.join(','))!
+      return { row: px.y, col: px.x, isTransparent: false, color }
+    })
+    if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+    const colorStats = computeColorStats(cells)
+    const beadCount = cells.filter(c => !c.isTransparent).length
+    setPatternData(prev => ({
+      size: { width: w, height: h },
+      rawPixels: pixels,
+      cells,
+      colorStats,
+      beadCount,
+      transparentCount,
+      ...(prev ? {} : {}),
+    }))
+  }
+
+  function handleSizeChange(w: number, h: number) {
+    setWidth(w); setHeight(h)
+    setRawPixels(null); setPatternData(null)
+    setEditMode(false); setCellHistory(null)
+  }
+
+  function handleBrandChange(newBrand: BrandName) {
+    setBrand(newBrand)
+    if (rawPixels && rawPixels.length > 0) runRematch(rawPixels, newBrand, width, height)
+  }
+
+  // ── Edit operations (stats sync + history on every edit) ────────────────────
   const applyEdit = useCallback((newCells: PatternCell[]) => {
     if (!patternData) return
     const colorStats = computeColorStats(newCells)
@@ -215,32 +224,27 @@ function App() {
     setCellHistory(prev => prev ? historyPush(prev, newCells) : historyCreate(newCells))
   }, [patternData])
 
-  function handleUndo() {
-    if (!cellHistory || !patternData) return
-    const [newH, cells] = historyUndo(cellHistory)
-    setCellHistory(newH)
+  function restoreCells(cells: PatternCell[]) {
+    if (!patternData) return
     const colorStats = computeColorStats(cells)
     const beadCount = cells.filter(c => !c.isTransparent).length
     const transparentCount = cells.filter(c => c.isTransparent).length
     setPatternData({ ...patternData, cells, colorStats, beadCount, transparentCount })
+  }
+
+  function handleUndo() {
+    if (!cellHistory) return
+    const [newH, cells] = historyUndo(cellHistory)
+    setCellHistory(newH); restoreCells(cells)
   }
 
   function handleRedo() {
-    if (!cellHistory || !patternData) return
+    if (!cellHistory) return
     const [newH, cells] = historyRedo(cellHistory)
-    setCellHistory(newH)
-    const colorStats = computeColorStats(cells)
-    const beadCount = cells.filter(c => !c.isTransparent).length
-    const transparentCount = cells.filter(c => c.isTransparent).length
-    setPatternData({ ...patternData, cells, colorStats, beadCount, transparentCount })
+    setCellHistory(newH); restoreCells(cells)
   }
 
   // ── Color operations ────────────────────────────────────────────────────────
-  function handleReplaceColor(fromCode: string, toColor: PaletteColor) {
-    if (!patternData) return
-    applyEdit(replaceColor(patternData.cells, fromCode, toColor, selection ?? undefined))
-  }
-
   function handleDeleteColor(code: string) {
     if (!patternData) return
     applyEdit(deleteColor(patternData.cells, code, selection ?? undefined))
@@ -251,23 +255,45 @@ function App() {
     applyEdit(outlineBody(patternData.cells, width, height, color))
   }
 
+  // ── Eyedropper pick: set paint color, source color, highlight, switch to brush
+  function handleColorPick(color: PaletteColor) {
+    setActiveColor(color)
+    setPickedSourceColor(color)
+    setHighlightColorCode(color.code)
+    setActiveTool('brush')  // return to canvas-edit state after picking
+  }
+
+  // ── Replace confirm flow ────────────────────────────────────────────────────
+  function handleRequestReplace(toColor: PaletteColor) {
+    if (!pickedSourceColor) return
+    setReplaceConfirm({ from: pickedSourceColor, to: toColor })
+  }
+
+  function confirmReplaceColor() {
+    if (!replaceConfirm || !patternData) return
+    applyEdit(replaceColor(patternData.cells, replaceConfirm.from.code, replaceConfirm.to, selection ?? undefined))
+    setPickedSourceColor(null)
+    setHighlightColorCode(null)
+    setReplaceConfirm(null)
+  }
+
   // ── Selection ───────────────────────────────────────────────────────────────
   function handleInvertSelection() {
     if (!patternData) return
     const { width: w, height: h } = patternData.size
-    const current = selection
-    if (!current) {
-      setSelection({ minRow: 0, maxRow: h - 1, minCol: 0, maxCol: w - 1 })
-    } else {
-      setSelection(null)
-    }
+    setSelection(prev => prev ? null : { minRow: 0, maxRow: h - 1, minCol: 0, maxCol: w - 1 })
   }
 
-  // ── Palette for QuickPalette ────────────────────────────────────────────────
+  function toggleEditMode() {
+    if (!patternData) {
+      setErrorMsg('请先生成图纸后再进入编辑模式')
+      return
+    }
+    setEditMode(v => !v)
+  }
+
   const palette = getPalette(brand)
-  const usedCodes = new Set(
-    patternData?.colorStats.map(s => s.color.code) ?? []
-  )
+  const usedCodes = new Set(patternData?.colorStats.map(s => s.color.code) ?? [])
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -278,19 +304,7 @@ function App() {
           <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
           <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
         </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.4.0</span>
-        {patternData && (
-          <button
-            onClick={() => setEditMode(v => !v)}
-            className={`text-xs px-3 py-1 rounded border transition-colors ${
-              editMode
-                ? 'bg-blue-500 text-white border-blue-500'
-                : 'border-blue-400 text-blue-600 hover:bg-blue-50'
-            }`}
-          >
-            {editMode ? '✏️ 编辑中' : '✏️ 进入编辑'}
-          </button>
-        )}
+        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.4.1</span>
       </header>
 
       {errorMsg && (
@@ -303,10 +317,9 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left sidebar ─────────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
-          {/* Upload */}
           <UploadPanel onImageLoad={handleImageLoad} />
 
-          {/* Image preprocessing: rotate + crop */}
+          {/* Image preprocessing */}
           {imageUrl && (
             <div className="mb-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图片预处理</p>
@@ -329,12 +342,12 @@ function App() {
               <button
                 onClick={() => setShowCropModal(true)}
                 className="w-full text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
-                ✂ 裁剪图片
+                ✂ 重新裁剪
               </button>
             </div>
           )}
 
-          {/* Settings (hidden in edit mode) */}
+          {/* Generate settings (hidden in edit mode) */}
           {!editMode && (
             <>
               <SettingsPanel
@@ -354,7 +367,7 @@ function App() {
             </>
           )}
 
-          {/* Editor tools (only in edit mode) */}
+          {/* Editor tools (edit mode only) */}
           {editMode && patternData && (
             <>
               <EditorToolbar
@@ -370,13 +383,11 @@ function App() {
                 onUndo={handleUndo}
                 onRedo={handleRedo}
                 highlightColorCode={highlightColorCode}
-                onClearHighlight={() => setHighlightColorCode(null)}
+                onClearHighlight={() => { setHighlightColorCode(null); setPickedSourceColor(null) }}
                 hasSelection={!!selection}
                 onClearSelection={() => setSelection(null)}
                 onInvertSelection={handleInvertSelection}
               />
-
-              {/* Outline body shortcut */}
               {activeColor && (
                 <button
                   onClick={() => handleOutlineBody(activeColor)}
@@ -391,29 +402,47 @@ function App() {
 
         {/* ── Center ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden p-4 flex flex-col">
-          <div className="bg-white rounded-xl border border-gray-200 flex-1 p-4 flex flex-col min-h-0">
-            {editMode && patternData ? (
-              <EditableCanvas
-                patternData={patternData}
-                activeTool={activeTool}
-                activeColor={activeColor}
-                highlightColorCode={highlightColorCode}
-                selection={selection}
-                mirror={mirror}
-                zoom={zoom}
-                onCellsChange={applyEdit}
-                onColorPick={(color) => { setActiveColor(color); setHighlightColorCode(color.code) }}
-                onSelectionChange={setSelection}
-              />
-            ) : (
-              <PreviewCanvas
-                imageUrl={imageUrl}
-                patternData={patternData}
-                width={width}
-                height={height}
-                mirror={mirror}
-              />
-            )}
+          <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col min-h-0 relative">
+            {/* Edit mode toggle — top right of canvas area */}
+            <div className="absolute top-2 right-2 z-10">
+              <button
+                onClick={toggleEditMode}
+                className={`text-xs px-2.5 py-1 rounded shadow-sm border transition-colors ${
+                  editMode
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : patternData
+                    ? 'bg-white border-blue-400 text-blue-600 hover:bg-blue-50'
+                    : 'bg-white border-gray-200 text-gray-400 cursor-default'
+                }`}
+              >
+                {editMode ? '← 返回预览' : '✏️ 进入编辑'}
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 p-4 pt-10 flex flex-col">
+              {editMode && patternData ? (
+                <EditableCanvas
+                  patternData={patternData}
+                  activeTool={activeTool}
+                  activeColor={activeColor}
+                  highlightColorCode={highlightColorCode}
+                  selection={selection}
+                  mirror={mirror}
+                  zoom={zoom}
+                  onCellsChange={applyEdit}
+                  onColorPick={handleColorPick}
+                  onSelectionChange={setSelection}
+                />
+              ) : (
+                <PreviewCanvas
+                  imageUrl={imageUrl}
+                  patternData={patternData}
+                  width={width}
+                  height={height}
+                  mirror={mirror}
+                />
+              )}
+            </div>
           </div>
         </main>
 
@@ -421,15 +450,18 @@ function App() {
         <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
           <PalettePanel selectedBrand={brand} onBrandChange={handleBrandChange} />
 
-          {/* Quick palette (edit mode) */}
+          {/* Quick palette — only in edit mode */}
           {editMode && (
             <QuickPalette
               colors={palette}
               activeColor={activeColor}
+              pickedSourceColor={pickedSourceColor}
               highlightColorCode={highlightColorCode}
               onSelectColor={setActiveColor}
               onHighlightColor={setHighlightColorCode}
-              onReplaceColor={handleReplaceColor}
+              onRequestReplace={handleRequestReplace}
+              onClearPickedSource={() => { setPickedSourceColor(null); setHighlightColorCode(null) }}
+              onSetPickedSource={(c) => { setPickedSourceColor(c); setHighlightColorCode(c.code) }}
               onDeleteColor={handleDeleteColor}
               usedCodes={usedCodes}
             />
@@ -451,13 +483,57 @@ function App() {
         </aside>
       </div>
 
-      {/* Crop modal */}
+      {/* Crop modal — auto-triggered on upload, or manual re-crop */}
       {showCropModal && imageUrl && (
         <CropModal
           imageUrl={imageUrl}
           onConfirm={handleCropConfirm}
-          onCancel={() => setShowCropModal(false)}
+          onSkip={handleCropSkip}
         />
+      )}
+
+      {/* Replace color confirm dialog */}
+      {replaceConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-gray-800 mb-3">确认替换颜色</h3>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-10 h-10 rounded border" style={{ backgroundColor: replaceConfirm.from.hex }} />
+                <span className="text-xs font-mono text-gray-700">{replaceConfirm.from.code}</span>
+              </div>
+              <span className="text-xl text-gray-400 font-light">→</span>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-10 h-10 rounded border" style={{ backgroundColor: replaceConfirm.to.hex }} />
+                <span className="text-xs font-mono text-gray-700">{replaceConfirm.to.code}</span>
+              </div>
+              <div className="flex-1 text-xs text-gray-500 leading-relaxed">
+                <p className="font-medium text-gray-700">
+                  {replaceConfirm.from.name !== replaceConfirm.from.code && replaceConfirm.from.name}
+                </p>
+                <p>替换为</p>
+                <p className="font-medium text-gray-700">
+                  {replaceConfirm.to.name !== replaceConfirm.to.code && replaceConfirm.to.name}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 bg-gray-50 rounded px-3 py-2 mb-4">
+              {selection
+                ? '📌 仅替换当前选区内的颜色'
+                : '🌐 替换全图中所有该颜色'}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setReplaceConfirm(null)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >取消</button>
+              <button
+                onClick={confirmReplaceColor}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >确认替换</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

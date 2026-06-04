@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.4.1 - 2026-06-04（编辑器交互修正与颜色替换流程优化）
+
+### Changed
+
+- **上传后自动弹出裁剪框**：`handleImageLoad` 在设置 imageUrl 后立即设 `showCropModal = true`，用户上传图片即进入裁剪流程；裁剪弹窗底部增加「跳过裁剪，使用原图」按钮，可直接跳过
+- **裁剪框比例预设**（`CropModal` 完全重写）：
+  - 新增 9 种比例：自由 / 原比例 / 1:1 / 2:3 / 3:4 / 9:16 / 3:2 / 4:3 / 16:9
+  - 选择固定比例后裁剪框自动居中并锁定宽高比
+  - 右下角拖动调整大小时保持选定比例（像素空间精确计算）
+  - "原比例"模式等图片加载完成后自动应用 naturalWidth/naturalHeight
+  - 增加 8 方向边角/边中手柄显示
+- **翻转后自动重新生成图纸**：`handleTransformImage` 检测 `rawPixels` 是否存在，若已生成过图纸则调用 `generatePatternFromUrl(newUrl)` 自动重新生成，无需用户再次点击「生成图纸」
+- **生成函数解耦**：新增 `generatePatternFromUrl(url)` 接受 URL 参数（而非读取 state），解决 React 异步 state 导致的旧 URL 问题；`generatePattern()` 调用它
+- **编辑入口移至预览区右上角**：中间 Canvas 容器增加绝对定位的「进入编辑 / ← 返回预览」按钮；移除 Header 中的编辑按钮；未生成图纸时点击显示提示
+- **吸色器拾色后自动切换到画笔**：`handleColorPick` 在设置 `activeColor` + `highlightColorCode` 的同时调用 `setActiveTool('brush')`
+- **状态分离**：`activeColor`（画笔颜色）与 `pickedSourceColor`（待替换的来源颜色）独立管理，不再混用
+- **颜色替换确认弹窗**：
+  - 吸色器 / 快速色板「替换颜色…」菜单设置 `pickedSourceColor`
+  - QuickPalette 检测到 `pickedSourceColor` 时显示橙色提示横幅「替换模式：来源 XXX，点击目标颜色」
+  - 点击目标颜色调用 `onRequestReplace(toColor)` → App.tsx 设置 `replaceConfirm` → 弹出确认弹窗
+  - 弹窗显示来源色→目标色的色块与色号，说明作用范围（全图 / 仅选区）
+  - 确认后调用 `replaceColor()` 并清空 `pickedSourceColor`、`replaceConfirm`
+- **QuickPalette 悬停菜单**：「替换颜色…」点击后通过 `onSetPickedSource` 进入替换模式（不再用内部 replaceFrom 状态）；「删除此色」保留
+
+---
+
 ## v0.4.0 - 2026-06-04（图纸编辑基础版）
 
 ### Added
