@@ -1,5 +1,28 @@
 # Prompt Log
 
+## 2026-06-04 第 7 轮指令（v0.3.5 高清渲染与放大清晰度优化）
+
+### 目标
+
+专业 PNG 放大后格子内色号文字不清晰、10格粗分区线不够清楚。通过提高导出 Canvas 分辨率解决。
+
+### 使用工具
+
+Claude Code
+
+### 提示词摘要
+
+v0.3.5 高清渲染优化。专业 PNG 加 EXPORT_SCALE=2 或动态 2x/3x；格子内色号单独字体栈 Consolas/Menlo；预览区加 devicePixelRatio 缩放；10格粗线和外边框保持清晰层级；不破坏 v0.3.4 已有功能。
+
+### 结果
+
+- `drawPatternTemplate.ts`：新增 `EXPORT_SCALE = 2`；canvas 物理尺寸 ×2；`ctx.scale(2,2)` 后所有逻辑代码无需改动
+- `FF_MONO` 改为 `Consolas, Menlo, Monaco, "Courier New", monospace`（色号字形更清晰）
+- `PreviewCanvas/index.tsx`：使用 `devicePixelRatio`（上限 2×）缩放 Canvas；CSS 尺寸锁定为逻辑尺寸；`drawStatsTab` 传逻辑尺寸修复 HiDPI 布局
+- 构建通过（零错误），版本推进至 v0.3.5
+
+---
+
 ## 2026-06-04 第 6 轮指令（v0.3.4 图纸命名、品牌展示、镜像功能与版式细节优化）
 
 ### 目标

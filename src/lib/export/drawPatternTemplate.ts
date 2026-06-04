@@ -10,9 +10,14 @@ const BRAND_SERIES: Record<string, string> = {
   '咪小窝': '咪小窝',
 }
 
+// ─── Export scale — canvas is drawn at 2× logical resolution for crisp PNG ───
+const EXPORT_SCALE = 2
+
 // ─── Typography ───────────────────────────────────────────────────────────────
+// UI text: CJK-first sans stack
 const FF = '"PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif'
-const FF_MONO = '"SF Mono", Menlo, Consolas, "Courier New", monospace'
+// Cell color codes: monospaced — Consolas/Menlo preferred for tight numerals
+const FF_MONO = 'Consolas, Menlo, Monaco, "Courier New", monospace'
 
 // ─── Wine-red palette (rulers + outer border) ─────────────────────────────────
 const WINE = '#8A1538'
@@ -133,10 +138,12 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
     : 0
   const canvasH = MV * 2 + TITLE_H + RH + gridH + RH + legendH + STATS_H + WM_H
 
+  // 2× physical canvas — ctx.scale keeps all logical coordinates unchanged
   const canvas = document.createElement('canvas')
-  canvas.width = canvasW
-  canvas.height = canvasH
+  canvas.width = Math.round(canvasW * EXPORT_SCALE)
+  canvas.height = Math.round(canvasH * EXPORT_SCALE)
   const ctx = canvas.getContext('2d')!
+  ctx.scale(EXPORT_SCALE, EXPORT_SCALE)
 
   // Fast cell lookup by (row * width + col)
   const cellLookup = new Map<number, PatternCell>()

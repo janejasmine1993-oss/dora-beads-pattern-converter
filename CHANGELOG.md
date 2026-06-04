@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.3.5 - 2026-06-04（高清渲染与放大清晰度优化）
+
+### Changed
+
+- **专业 PNG 2× 高清导出**（`drawPatternTemplate.ts`）：
+  - 新增 `EXPORT_SCALE = 2` 常量；物理 Canvas 尺寸翻倍（`canvas.width/height × 2`）
+  - 通过 `ctx.scale(2, 2)` 统一缩放，所有逻辑坐标代码无需修改
+  - 52×52 图纸导出宽度从 ~1264px 升至 ~2528px；104×104 从 ~1680px 升至 ~3360px
+  - 0.5px 细网格线在 2× 后变为 1px 物理像素，完全消除抗锯齿模糊
+  - 1.8px 10格粗线变为 3.6px 物理像素，十字定位更清晰
+  - 格子内色号文字在 2× 后物理尺寸翻倍，放大查看依然清晰锐利
+- **格子内色号字体栈调整**：`FF_MONO` 改为 `Consolas, Menlo, Monaco, "Courier New", monospace`（Consolas/Menlo 字形更紧凑、数字间距更均匀，适合多字符色号）
+- **预览 Canvas HiDPI 缩放**（`PreviewCanvas/index.tsx`）：
+  - 使用 `window.devicePixelRatio`（上限 2×）缩放 Canvas 物理像素
+  - 通过 `canvas.style.width/height` 将 CSS 显示尺寸锁定为逻辑尺寸，Retina 屏渲染清晰
+  - `drawStatsTab` 传入逻辑尺寸（非物理 canvas.width），保证统计图布局正确
+
+---
+
 ## v0.3.4 - 2026-06-04（图纸命名、品牌展示、镜像功能与版式细节优化）
 
 ### Added

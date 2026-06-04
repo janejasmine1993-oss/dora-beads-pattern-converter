@@ -79,6 +79,13 @@
 - [x] 水印条升级（靛蓝配色）
 - [x] 修复 TS6196 构建错误（移除未使用的 ColorStat 导入）
 
+## v0.3.5 任务（已完成）
+
+- [x] 专业 PNG 加 `EXPORT_SCALE = 2`，物理画布翻倍，`ctx.scale(2,2)` 统一缩放
+- [x] 格子内色号字体栈改为 `Consolas, Menlo, Monaco, "Courier New", monospace`
+- [x] 预览 Canvas 加 devicePixelRatio 缩放（上限 2×），CSS 尺寸锁定为逻辑尺寸
+- [x] `drawStatsTab` 传逻辑尺寸修复统计图在 HiDPI 下的布局
+
 ## v0.3.4 任务（已完成）
 
 - [x] 新增图纸名称输入框（SettingsPanel，上传后自动从文件名提取默认值）

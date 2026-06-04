@@ -1,6 +1,12 @@
 # Known Issues
 
-## v0.3.4 当前已知问题
+## v0.3.5 当前已知问题
+
+### 已修复（v0.3.5）
+
+- ✅ 专业 PNG 2× 高清导出（放大查看色号文字清晰）
+- ✅ 预览 Canvas devicePixelRatio 缩放（Retina 屏不模糊）
+- ✅ 格子内色号字体改为 Consolas/Menlo 等宽字形
 
 ### 已修复（v0.3.4）
 

@@ -31,6 +31,8 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
     if (!patternData) {
       canvas.width = 4
       canvas.height = 4
+      canvas.style.width = '4px'
+      canvas.style.height = '4px'
       ctx.clearRect(0, 0, 4, 4)
       return
     }
@@ -38,15 +40,28 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
     const { size, cells, rawPixels, colorStats } = patternData
     const cellSize = calcCellSize(size.width, size.height)
 
+    // Apply devicePixelRatio for crisp rendering on HiDPI displays (cap at 2×)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+
+    let logicalW: number
+    let logicalH: number
+
     if (activeTab === 'stats') {
-      canvas.width = 520
-      canvas.height = Math.max(200, 56 + Math.ceil(colorStats.length / Math.floor(520 / 120)) * 60)
+      logicalW = 520
+      logicalH = Math.max(200, 56 + Math.ceil(colorStats.length / Math.floor(520 / 120)) * 60)
     } else {
-      canvas.width = size.width * cellSize
-      canvas.height = size.height * cellSize
+      logicalW = size.width * cellSize
+      logicalH = size.height * cellSize
     }
 
+    // Physical canvas = logical × dpr; CSS size = logical (so 1 CSS px = dpr physical px)
+    canvas.width = Math.round(logicalW * dpr)
+    canvas.height = Math.round(logicalH * dpr)
+    canvas.style.width = `${logicalW}px`
+    canvas.style.height = `${logicalH}px`
+
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.scale(dpr, dpr)
 
     switch (activeTab) {
       case 'pixel':
@@ -59,7 +74,8 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
         drawColorCodeTab(ctx, cells, colorStats, size.width, size.height, cellSize, mirror)
         break
       case 'stats':
-        drawStatsTab(ctx, colorStats, canvas.width, canvas.height)
+        // Pass logical dimensions — not physical canvas.width/canvas.height
+        drawStatsTab(ctx, colorStats, logicalW, logicalH)
         break
     }
   }, [activeTab, patternData, mirror])
@@ -102,7 +118,10 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
           isEmpty ? (
             <EmptyHint text={emptyHintText(activeTab)} />
           ) : (
-            <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />
+            <canvas
+              ref={canvasRef}
+              style={{ imageRendering: 'pixelated' }}
+            />
           )
         )}
       </div>
