@@ -190,6 +190,7 @@ function App() {
     offsetX: number
     offsetY: number
     sampleMode: 'center' | 'average3x3'
+    preserveColorCount: boolean
   }) {
     setErrorMsg(null)
     setIsGenerating(true)
@@ -205,7 +206,11 @@ function App() {
       const nonTransparent = pixels.filter(px => !px.isTransparent)
       const transparentCount = pixels.length - nonTransparent.length
       const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
-      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+
+      // Use maxColors limit or preserve original colors
+      const colorLimit = params.preserveColorCount ? ntRgb.length : maxColors
+      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, colorLimit) : []
+
       const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
       for (const c of clusters) {
         const key = c.join(',')
