@@ -21,6 +21,7 @@ import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
 import { extractPixels } from './lib/image/pixelate'
+import { samplePixelGrid } from './lib/image/samplePixelGrid'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { quantizeColors } from './lib/image/quantize'
 import { mergeLowUsageColors } from './lib/image/mergeColors'
@@ -178,6 +179,62 @@ function App() {
   async function generatePattern() {
     if (!imageUrl) { setErrorMsg('请先上传图片'); return }
     await generatePatternFromUrl(imageUrl)
+  }
+
+  // ── Pixel grid recognition ──────────────────────────────────────────────────
+  async function generatePatternFromPixelGrid(params: {
+    imageUrl: string
+    gridCols: number
+    gridRows: number
+    cellSizePx: number
+    offsetX: number
+    offsetY: number
+    sampleMode: 'center' | 'average3x3'
+  }) {
+    setErrorMsg(null)
+    setIsGenerating(true)
+    setPatternData(null)
+    setEditMode(false)
+    setCellHistory(null)
+    try {
+      const pixels = await samplePixelGrid(params)
+      setRawPixels(pixels)
+
+      const palette = getPalette(brand)
+      const labCache = buildLabCache(palette)
+      const nonTransparent = pixels.filter(px => !px.isTransparent)
+      const transparentCount = pixels.length - nonTransparent.length
+      const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
+      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+      const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+      for (const c of clusters) {
+        const key = c.join(',')
+        if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+      }
+      let ntIdx = 0
+      const w = params.gridCols
+      const h = params.gridRows
+      let cells: PatternCell[] = pixels.map((px, idx) => {
+        const col = idx % w
+        const row = Math.floor(idx / w)
+        if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
+        const cluster = clusters[ntIdx++]
+        const color = clusterCache.get(cluster.join(','))!
+        return { row, col, isTransparent: false, color }
+      })
+      if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+      const colorStats = computeColorStats(cells)
+      const beadCount = cells.filter(c => !c.isTransparent).length
+      setPatternData({ size: { width: w, height: h }, cells, rawPixels: pixels, colorStats, beadCount, transparentCount })
+      setCellHistory(historyCreate(cells))
+      setImageUrl(params.imageUrl)
+      setWorkTitle('')
+    } catch (err) {
+      setErrorMsg('像素图识别失败，请检查参数或图片质量')
+      console.error(err)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   // ── Rematch on brand/color-count change ─────────────────────────────────────
@@ -434,7 +491,7 @@ function App() {
           {/* Upload Panel or Mode-Specific Panel */}
           {importMode === 'photo-direct' && <UploadPanel onImageLoad={handleImageLoad} />}
           {importMode === 'ai-enhanced' && <BackgroundRemovalPanel onApply={(url) => { setImageUrl(url) }} isLoading={isGenerating} />}
-          {importMode === 'pixel-grid' && <PixelGridImportPanel onImageLoad={handleImageLoad} />}
+          {importMode === 'pixel-grid' && <PixelGridImportPanel onGridDataReady={generatePatternFromPixelGrid} isProcessing={isGenerating} />}
           {importMode === 'existing-pattern' && <ExistingPatternImportPanel onImageLoad={handleImageLoad} />}
 
           {/* Image preprocessing */}
