@@ -13,10 +13,15 @@ import { CropModal } from './components/CropModal'
 import { BackgroundRemovalPanel } from './components/BackgroundRemovalPanel'
 import { PixelGridImportPanel } from './components/PixelGridImportPanel'
 import { ExistingPatternImportPanel } from './components/ExistingPatternImportPanel'
+import { AppHeader } from './components/AppHeader'
+import { HomePage } from './components/HomePage'
+import { ComingSoonModal } from './components/ComingSoonModal'
 import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 
 type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
+type AppPage = 'home' | 'workspace'
+type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | null
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
@@ -37,6 +42,10 @@ import type { EditorTool, SelectionRect } from './lib/editor/types'
 import './index.css'
 
 function App() {
+  // ── App page routing ─────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState<AppPage>('home')
+  const [comingSoonFeature, setComingSoonFeature] = useState<ComingSoonFeature>(null)
+
   // ── Import mode ──────────────────────────────────────────────────────────────
   const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
 
@@ -446,17 +455,58 @@ function App() {
   const palette = getPalette(brand)
   const usedCodes = new Set(patternData?.colorStats.map(s => s.color.code) ?? [])
 
+  function handleNavigate(page: AppPage) {
+    setCurrentPage(page)
+  }
+
+  function handleFeatureClick(feature: ComingSoonFeature) {
+    setComingSoonFeature(feature)
+  }
+
+  function handleStartCreating() {
+    setCurrentPage('workspace')
+  }
+
+  function handleSelectMode(mode: ImportMode) {
+    setImportMode(mode)
+    setCurrentPage('workspace')
+  }
+
+  // Home page view
+  if (currentPage === 'home') {
+    return (
+      <>
+        <AppHeader
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onFeatureClick={handleFeatureClick}
+        />
+        <HomePage
+          onStartCreating={handleStartCreating}
+          onSelectMode={handleSelectMode}
+        />
+        {comingSoonFeature && (
+          <ComingSoonModal
+            isOpen={!!comingSoonFeature}
+            feature={comingSoonFeature}
+            onClose={() => setComingSoonFeature(null)}
+          />
+        )}
+      </>
+    )
+  }
+
+  // Workspace view
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shrink-0">
-        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">豆</div>
-        <div>
-          <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
-          <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
-        </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.4.1</span>
-      </header>
+      {/* App Header */}
+      <AppHeader
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onFeatureClick={handleFeatureClick}
+      />
+
+      {/* Old workspace content below */}
 
       {errorMsg && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-600 flex items-center justify-between shrink-0">
@@ -718,6 +768,15 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Coming Soon Modal */}
+      {comingSoonFeature && (
+        <ComingSoonModal
+          isOpen={!!comingSoonFeature}
+          feature={comingSoonFeature}
+          onClose={() => setComingSoonFeature(null)}
+        />
       )}
     </div>
   )
