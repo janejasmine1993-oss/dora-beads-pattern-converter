@@ -10,8 +10,13 @@ import { PalettePanel } from './components/PalettePanel'
 import { StatsPanel } from './components/StatsPanel'
 import { ExportPanel } from './components/ExportPanel'
 import { CropModal } from './components/CropModal'
+import { BackgroundRemovalPanel } from './components/BackgroundRemovalPanel'
+import { PixelGridImportPanel } from './components/PixelGridImportPanel'
+import { ExistingPatternImportPanel } from './components/ExistingPatternImportPanel'
 import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
+
+type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
@@ -31,6 +36,9 @@ import type { EditorTool, SelectionRect } from './lib/editor/types'
 import './index.css'
 
 function App() {
+  // ── Import mode ──────────────────────────────────────────────────────────────
+  const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
+
   // ── Image ───────────────────────────────────────────────────────────────────
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [workTitle, setWorkTitle] = useState('')
@@ -398,7 +406,36 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left sidebar ─────────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
-          <UploadPanel onImageLoad={handleImageLoad} />
+          {/* Import Mode Selection */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">导入模式</p>
+            <div className="space-y-1">
+              {([
+                { id: 'photo-direct' as const, label: '📸 直接拍照' },
+                { id: 'ai-enhanced' as const, label: '🤖 AI 增强' },
+                { id: 'pixel-grid' as const, label: '🔲 像素识别' },
+                { id: 'existing-pattern' as const, label: '📋 既有图纸' },
+              ] as Array<{ id: ImportMode; label: string }>).map(mode => (
+                <button
+                  key={mode.id}
+                  onClick={() => setImportMode(mode.id)}
+                  className={`w-full text-left px-3 py-2 text-xs rounded border transition-colors ${
+                    importMode === mode.id
+                      ? 'bg-blue-50 border-blue-400 text-blue-700 font-medium'
+                      : 'border-gray-300 text-gray-600 hover:border-blue-300'
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Upload Panel or Mode-Specific Panel */}
+          {importMode === 'photo-direct' && <UploadPanel onImageLoad={handleImageLoad} />}
+          {importMode === 'ai-enhanced' && <BackgroundRemovalPanel onApply={(url) => { setImageUrl(url) }} isLoading={isGenerating} />}
+          {importMode === 'pixel-grid' && <PixelGridImportPanel onImageLoad={handleImageLoad} />}
+          {importMode === 'existing-pattern' && <ExistingPatternImportPanel onImageLoad={handleImageLoad} />}
 
           {/* Image preprocessing */}
           {imageUrl && (
