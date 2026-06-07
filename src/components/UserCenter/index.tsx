@@ -23,12 +23,10 @@ export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) 
   const { membership, daysUntilExpiry, upgradeMembership, loading: membershipLoading, error: membershipError } = useMembership()
   const { credits, resetCredits, loading: creditsLoading, error: creditsError } = useCredits()
   const { availableCodes, redeemHistory, isProcessing: isProcessingRedeem, redeem } = useRedeemCode(user?.id)
-  const { works, saveWork, deleteWork, renameWork } = useWorks(user?.id)
+  const { works, loading: worksLoading, error: worksError, saveWork, deleteWork, renameWork } = useWorks()
 
-  const handleSaveMockWork = () => {
-    if (!user) return
-    saveWork({
-      userId: user.id,
+  const handleSaveMockWork = async () => {
+    await saveWork({
       title: `我的作品 - ${new Date().toLocaleTimeString('zh-CN')}`,
       beadBrand: 'BOZLES',
       colorCount: Math.floor(Math.random() * 15) + 3,
@@ -169,6 +167,8 @@ export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) 
             <MyWorksPanel
               isLoggedIn={isLoggedIn}
               works={works}
+              loading={worksLoading}
+              error={worksError}
               onSaveMockWork={handleSaveMockWork}
               onDeleteWork={deleteWork}
               onRenameWork={renameWork}

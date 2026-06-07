@@ -3,7 +3,7 @@ export interface UserWork {
   userId: string
   title: string
   sourceImageName?: string
-  previewImageUrl?: string
+  previewImageUrl?: string | null
   patternSize: {
     width: number
     height: number
@@ -16,7 +16,7 @@ export interface UserWork {
   tags?: string[]
 }
 
-export type UserWorkInput = Omit<UserWork, 'id' | 'createdAt' | 'updatedAt'>
+export type UserWorkInput = Omit<UserWork, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'sourceImageName'>
 
 export interface AiCredits {
   userId: string

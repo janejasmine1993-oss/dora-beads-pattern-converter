@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.8.0-d - works-postgresql-migration - 2026-06-08
+
+### ✨ 核心改进
+
+**作品系统从 localStorage 迁移到 PostgreSQL**：
+- ✅ 创建 server/services/worksService.ts 作品业务逻辑
+- ✅ 新增 GET /api/works 获取当前用户所有作品
+- ✅ 新增 GET /api/works/:id 获取单个作品
+- ✅ 新增 POST /api/works 创建新作品
+- ✅ 新增 PATCH /api/works/:id 更新作品
+- ✅ 新增 DELETE /api/works/:id 删除作品
+
+**前端作品管理更新**：
+- ✅ 创建 src/services/api/worksApi.ts API 客户端
+- ✅ 重写 useWorks hook 改为调用后端 API
+- ✅ 更新 MyWorksPanel 支持异步操作和加载状态
+- ✅ 我的作品页面显示服务端数据
+- ✅ 支持作品保存、重命名、删除
+
+**权限隔离**：
+- ✅ 所有作品 API 需要 authMiddleware 认证
+- ✅ 用户只能访问/修改/删除自己的作品
+- ✅ 非 owner 的作品访问返回 404
+
+**数据持久化**：
+- ✅ 刷新页面后作品仍然存在
+- ✅ localStorage 不再作为主作品数据源
+- ✅ 跨设备作品同步（通过 PostgreSQL）
+
+---
+
 ## v0.8.0-c - membership-and-ai-credits-api - 2026-06-08
 
 ### ✨ 核心改进
