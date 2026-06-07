@@ -1,5 +1,5 @@
 import express from 'express'
-import type { RealAiStyleRequest, RealAiStyleResult } from '../../src/services/ai/aiProviderTypes'
+import type { RealAiStyleRequest, RealAiStyleResult } from '../types/aiProvider'
 import { getTencentHunyuanProvider } from '../services/providers/tencentHunyuanProvider'
 
 export const aiStyleRouter = express.Router()

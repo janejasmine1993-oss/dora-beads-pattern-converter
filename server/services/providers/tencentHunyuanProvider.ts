@@ -3,7 +3,7 @@
  * 使用 tencentcloud-sdk-nodejs 调用腾讯云 AIART API
  */
 
-import type { RealAiStyleRequest, RealAiStyleResult } from '../../../src/services/ai/aiProviderTypes'
+import type { RealAiStyleRequest, RealAiStyleResult } from '../../types/aiProvider'
 import { getPromptByPreset } from '../promptMaps/tencentHunyuanPromptMap'
 import { getStyleIdByPreset } from '../promptMaps/tencentHunyuanStyleMap'
 
