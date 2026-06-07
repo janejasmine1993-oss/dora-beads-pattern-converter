@@ -843,7 +843,11 @@ function App() {
       )}
 
       {/* User Center Modal */}
-      <UserCenter isOpen={isUserCenterOpen} onClose={() => setIsUserCenterOpen(false)} />
+      <UserCenter
+        isOpen={isUserCenterOpen}
+        onClose={() => setIsUserCenterOpen(false)}
+        currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
+      />
 
       {/* User Center Button (Floating) */}
       {currentPage === 'workspace' && (

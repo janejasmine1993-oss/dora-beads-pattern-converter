@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { AiStyleRequest, AiStyleResult, AiStylePresetConfig } from '../types/aiStyle'
+import type { AiStyleRequest, AiStyleResult, AiStylePresetConfig, AiStyleSourceImage } from '../types/aiStyle'
 import { aiStyleMockService } from '../services/mock/aiStyleMockService'
 
 export function useAiStyle(userId: string | undefined) {
@@ -23,23 +23,35 @@ export function useAiStyle(userId: string | undefined) {
     setHistory(h)
   }, [userId])
 
-  const processStyle = async (request: AiStyleRequest) => {
+  const processStyle = async (presetId: string, sourceImage: AiStyleSourceImage): Promise<void> => {
     if (!userId) {
       setError('请先登录')
-      return null
+      return
+    }
+
+    if (!sourceImage) {
+      setError('请先上传图片')
+      return
     }
 
     setIsProcessing(true)
     setError(null)
 
     try {
+      const request: AiStyleRequest = {
+        userId,
+        sourceImage,
+        presetId: presetId as any,
+        strength: 0.8,
+        keepOriginalColors: true,
+        targetUseCase: 'bead-pattern',
+      }
+
       const result = await aiStyleMockService.mockStyleTransfer(userId, request)
       setHistory([result, ...history])
-      return result
     } catch (err) {
       const message = err instanceof Error ? err.message : '处理失败'
       setError(message)
-      return null
     } finally {
       setIsProcessing(false)
     }
@@ -47,6 +59,14 @@ export function useAiStyle(userId: string | undefined) {
 
   const getPreset = (presetId: string) => {
     return aiStyleMockService.getPreset(presetId as any)
+  }
+
+  const getProcessPresets = () => {
+    return aiStyleMockService.getProcessPresets()
+  }
+
+  const getStylePresets = () => {
+    return aiStyleMockService.getStylePresets()
   }
 
   const getFreePresets = () => {
@@ -64,6 +84,8 @@ export function useAiStyle(userId: string | undefined) {
     error,
     processStyle,
     getPreset,
+    getProcessPresets,
+    getStylePresets,
     getFreePresets,
     getMemberPresets,
   }

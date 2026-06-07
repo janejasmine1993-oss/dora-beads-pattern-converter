@@ -11,16 +11,15 @@ import { useCredits } from '../../hooks/useCredits'
 import { useAiStyle } from '../../hooks/useAiStyle'
 import { useRedeemCode } from '../../hooks/useRedeemCode'
 import { useWorks } from '../../hooks/useWorks'
-import type { AiStyleRequest } from '../../types/aiStyle'
-
 type Tab = 'status' | 'membership' | 'ai-style' | 'works' | 'redeem'
 
 interface UserCenterProps {
   isOpen: boolean
   onClose: () => void
+  currentWorkspaceImage?: { url: string; name: string }
 }
 
-export function UserCenter({ isOpen, onClose }: UserCenterProps) {
+export function UserCenter({ onClose, currentWorkspaceImage }: UserCenterProps) {
   const [activeTab, setActiveTab] = useState<Tab>('status')
   const { user, isLoggedIn, login, logout } = useAuth()
   const { membership, daysUntilExpiry, upgradeMembership, getBenefits, getAllLevels } = useMembership(user?.id)
@@ -28,20 +27,6 @@ export function UserCenter({ isOpen, onClose }: UserCenterProps) {
   const { presets, isProcessing: isProcessingStyle, error: styleError, processStyle } = useAiStyle(user?.id)
   const { availableCodes, redeemHistory, isProcessing: isProcessingRedeem, redeem } = useRedeemCode(user?.id)
   const { works, saveWork, deleteWork, renameWork } = useWorks(user?.id)
-
-  if (!isOpen) return null
-
-  const handleProcessStyle = async (presetId: string) => {
-    if (!user) return
-    const request: AiStyleRequest = {
-      userId: user.id,
-      presetId: presetId as any,
-      strength: 0.8,
-      keepOriginalColors: true,
-      targetUseCase: 'bead-pattern',
-    }
-    await processStyle(request)
-  }
 
   const handleSaveMockWork = () => {
     if (!user) return
@@ -123,12 +108,13 @@ export function UserCenter({ isOpen, onClose }: UserCenterProps) {
                 presets={presets}
                 isProcessing={isProcessingStyle}
                 error={styleError}
-                onProcessStyle={handleProcessStyle}
+                onProcessStyle={processStyle}
                 credits={
                   credits
                     ? { dailyRemaining: credits.dailyRemaining, extraCredits: credits.extraCredits }
                     : null
                 }
+                currentWorkspaceImage={currentWorkspaceImage}
               />
             </>
           )}
@@ -166,7 +152,7 @@ export function UserCenter({ isOpen, onClose }: UserCenterProps) {
 
         {/* 底部提示 */}
         <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-          <p>🔧 v0.7.0 - Mock 模式 - 仅用于测试和演示</p>
+          <p>🔧 v0.7.1 - Mock 模式 - 仅用于测试和演示</p>
         </div>
       </div>
     </div>

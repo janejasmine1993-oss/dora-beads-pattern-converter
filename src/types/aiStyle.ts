@@ -1,3 +1,10 @@
+export type AiProcessPreset =
+  | 'remove-background'
+  | 'clean-background'
+  | 'enhance-clarity'
+  | 'color-optimize'
+  | 'reduce-noise'
+
 export type AiStylePreset =
   | 'pixel-clean'
   | 'bead-pattern'
@@ -8,20 +15,33 @@ export type AiStylePreset =
   | 'watercolor'
   | 'chinese-flower-map'
 
+export type AiPreset = AiProcessPreset | AiStylePreset
+
+export interface AiStyleSourceImage {
+  id: string
+  name: string
+  type: string
+  size: number
+  width?: number
+  height?: number
+  previewUrl: string
+  createdAt: string
+}
+
 export interface AiStylePresetConfig {
-  id: AiStylePreset
+  id: AiPreset
   name: string
   description: string
   suitableFor: string
   isMemberOnly: boolean
   creditCost: number
+  category: 'process' | 'style'
 }
 
 export interface AiStyleRequest {
   userId: string
-  sourceImageId?: string
-  sourceImageName?: string
-  presetId: AiStylePreset
+  sourceImage: AiStyleSourceImage
+  presetId: AiPreset
   prompt?: string
   strength: number
   keepOriginalColors: boolean
@@ -30,9 +50,11 @@ export interface AiStyleRequest {
 
 export interface AiStyleResult {
   id: string
-  status: 'pending' | 'processing' | 'success' | 'failed'
-  presetId: AiStylePreset
+  status: 'idle' | 'pending' | 'processing' | 'success' | 'failed'
+  presetId: AiPreset
+  sourceImage?: AiStyleSourceImage
   previewImageUrl?: string
   message: string
+  creditCost: number
   createdAt: string
 }

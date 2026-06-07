@@ -1,5 +1,97 @@
 # CHANGELOG
 
+## v0.7.1-ai-style-panel-fix - 2026-06-07
+
+### 🔧 修复内容
+
+**AI 优化页面改进**：
+- ✅ 新增独立图片上传窗口（支持点击和拖拽）
+- ✅ 支持 JPG / PNG / WEBP 格式
+- ✅ 图片预览、文件名、尺寸显示
+- ✅ 支持重新上传和清空图片
+- ✅ 支持两种图片来源：
+  - 工作台图片直接使用
+  - 或在优化页单独上传
+
+**风格选项可用性修复**：
+- ✅ 所有预设选项都可点击（不再灰掉）
+- ✅ 去除背景、清理背景等处理预设启用
+- ✅ 权限和次数不足时显示清晰提示
+- ✅ 分离显示"图片处理"和"风格转换"两类预设
+
+**生成流程改进**：
+- ✅ 新增图片处理预设（5 个）
+  - 去除背景 (free)
+  - 清理杂乱背景 (free)
+  - 提高清晰度 (member)
+  - 颜色优化 (member)
+  - 减少杂色 (member)
+- ✅ 改进 mock 结果显示
+- ✅ 添加生成结果预览区
+- ✅ 明确提示 mock 模式
+
+### 📊 类型定义更新
+
+```ts
+// 新增图片处理类型
+type AiProcessPreset =
+  | 'remove-background'
+  | 'clean-background'
+  | 'enhance-clarity'
+  | 'color-optimize'
+  | 'reduce-noise'
+
+// 图片源定义
+interface AiStyleSourceImage {
+  id: string
+  name: string
+  type: string
+  size: number
+  width?: number
+  height?: number
+  previewUrl: string
+  createdAt: string
+}
+
+// 预设配置
+interface AiStylePresetConfig {
+  id: AiPreset
+  name: string
+  description: string
+  suitableFor: string
+  isMemberOnly: boolean
+  creditCost: number
+  category: 'process' | 'style'  // 新增
+}
+```
+
+### 📁 新增文件
+
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 图片上传组件
+
+### 🔄 修改文件
+
+- `src/types/aiStyle.ts` - 新增类型定义
+- `src/services/mock/aiStyleMockService.ts` - 新增处理预设
+- `src/components/UserCenter/AiStylePanel.tsx` - 完全重写
+- `src/hooks/useAiStyle.ts` - 更新函数签名
+- `src/components/UserCenter/index.tsx` - 更新调用方式
+- `src/App.tsx` - 传递工作台图片
+
+### ✅ 验证清单
+
+- [x] AI 优化页面有独立上传窗口
+- [x] 支持 JPG/PNG/WEBP 格式
+- [x] 去除背景可点击
+- [x] 其他风格选项可点击
+- [x] 未登录时有提示
+- [x] 会员专属功能有提示
+- [x] AI 次数不足有提示
+- [x] npm run build 通过
+- [x] 原有功能不受影响
+
+---
+
 ## v0.7.0-ai-style-mock - 2026-06-07
 
 ### 🎯 版本目标
