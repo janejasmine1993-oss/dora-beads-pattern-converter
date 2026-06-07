@@ -15,11 +15,24 @@ interface PreviewCanvasProps {
   width?: number
   height?: number
   mirror?: boolean
+  onEditClick?: () => void
+  autoSelectPixelTab?: boolean
+  onGenerate?: () => void
+  isGenerating?: boolean
+  canGenerate?: boolean
 }
 
-export function PreviewCanvas({ imageUrl, patternData, mirror = false }: PreviewCanvasProps) {
+export function PreviewCanvas({ imageUrl, patternData, mirror = false, onEditClick, autoSelectPixelTab, onGenerate, isGenerating = false, canGenerate = false }: PreviewCanvasProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('original')
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Auto-select pixel tab when pattern is generated
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (autoSelectPixelTab && patternData) {
+      setActiveTab('pixel')
+    }
+  }, [autoSelectPixelTab, patternData])
 
   useEffect(() => {
     if (activeTab === 'original') return
@@ -63,19 +76,21 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.scale(dpr, dpr)
 
+    // Watermark: disabled for preview, only shown during PNG export
+    const showWatermark = false
+
     switch (activeTab) {
       case 'pixel':
-        drawPixelTab(ctx, rawPixels, size.width, size.height, cellSize, mirror)
+        drawPixelTab(ctx, rawPixels, size.width, size.height, cellSize, mirror, showWatermark)
         break
       case 'grid':
-        drawGridTab(ctx, cells, size.width, size.height, cellSize, mirror)
+        drawGridTab(ctx, cells, size.width, size.height, cellSize, mirror, showWatermark)
         break
       case 'colorcode':
-        drawColorCodeTab(ctx, cells, colorStats, size.width, size.height, cellSize, mirror)
+        drawColorCodeTab(ctx, cells, colorStats, size.width, size.height, cellSize, mirror, showWatermark)
         break
       case 'stats':
-        // Pass logical dimensions — not physical canvas.width/canvas.height
-        drawStatsTab(ctx, colorStats, logicalW, logicalH)
+        drawStatsTab(ctx, colorStats, logicalW)
         break
     }
   }, [activeTab, patternData, mirror])
@@ -84,7 +99,7 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex border-b border-gray-200 mb-3 shrink-0">
+      <div className="flex items-center border-b border-gray-200 mb-3 shrink-0 gap-3">
         {PREVIEW_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -98,6 +113,21 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
             {tab.label}
           </button>
         ))}
+        {onGenerate && (
+          <button
+            onClick={onGenerate}
+            disabled={!canGenerate || isGenerating}
+            className={`shrink-0 px-3 py-1.5 text-xs font-bold text-white rounded-full transition-colors ${
+              !canGenerate
+                ? 'bg-gray-300 cursor-not-allowed'
+                : isGenerating
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600 shadow-sm'
+            }`}
+          >
+            {isGenerating ? '生成中…' : canGenerate ? '生成图纸' : ''}
+          </button>
+        )}
         {mirror && (
           <span className="ml-auto self-center text-xs text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
             镜像
@@ -105,7 +135,7 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
         )}
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200 overflow-auto">
+      <div className="flex-1 min-h-0 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200 overflow-auto relative">
         {activeTab === 'original' && (
           imageUrl ? (
             <img src={imageUrl} alt="原图" className="max-w-full max-h-full object-contain" />
@@ -123,6 +153,16 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false }: Preview
               style={{ imageRendering: 'pixelated' }}
             />
           )
+        )}
+
+        {onEditClick && activeTab !== 'original' && !isEmpty && (
+          <button
+            onClick={onEditClick}
+            className="absolute top-3 right-3 shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-[#ff3f78] to-[#ff78a7] rounded-full hover:from-[#ff2d6a] hover:to-[#ff6899] transition-all shadow-md"
+          >
+            <span>✏️</span>
+            进入编辑
+          </button>
         )}
       </div>
     </div>

@@ -6,9 +6,6 @@ interface SettingsPanelProps {
   width: number
   height: number
   onSizeChange: (w: number, h: number) => void
-  onGenerate: () => void
-  isGenerating: boolean
-  canGenerate: boolean
   workTitle: string
   onWorkTitleChange: (v: string) => void
 }
@@ -17,9 +14,6 @@ export function SettingsPanel({
   width,
   height,
   onSizeChange,
-  onGenerate,
-  isGenerating,
-  canGenerate,
   workTitle,
   onWorkTitleChange,
 }: SettingsPanelProps) {
@@ -111,20 +105,6 @@ export function SettingsPanel({
           <p className="text-yellow-600 mt-1">尺寸较大，生成可能需要几秒</p>
         )}
       </div>
-
-      <button
-        onClick={onGenerate}
-        disabled={!canGenerate || isGenerating}
-        className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-          !canGenerate
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : isGenerating
-            ? 'bg-blue-300 text-white cursor-not-allowed'
-            : 'bg-blue-500 hover:bg-blue-600 text-white'
-        }`}
-      >
-        {isGenerating ? '生成中…' : canGenerate ? '生成图纸' : '请先上传图片'}
-      </button>
     </div>
   )
 }

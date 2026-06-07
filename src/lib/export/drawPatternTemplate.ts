@@ -110,6 +110,71 @@ function drawVLine(
   ctx.restore()
 }
 
+// 绘制网格边缘的刻度线：每 1 格一条细线，每 5 格标记，每 10 格重点标记
+function drawTickMarks(
+  ctx: CanvasRenderingContext2D,
+  gridX: number, gridY: number, gridW: number, gridH: number,
+  width: number, height: number, CS: number
+): void {
+  const TICK_COLOR = 'rgba(138,21,56,0.6)'
+
+  // 顶部和底部：列刻度
+  for (let col = 1; col <= width; col++) {
+    const x = gridX + col * CS
+    let tickH = 4, lineW = 0.5
+
+    if (col % 10 === 0) {
+      tickH = 10
+      lineW = 1.2
+    } else if (col % 5 === 0) {
+      tickH = 7
+      lineW = 0.8
+    }
+
+    // 顶部刻度
+    ctx.strokeStyle = TICK_COLOR
+    ctx.lineWidth = lineW
+    ctx.beginPath()
+    ctx.moveTo(x, gridY - tickH)
+    ctx.lineTo(x, gridY)
+    ctx.stroke()
+
+    // 底部刻度
+    ctx.beginPath()
+    ctx.moveTo(x, gridY + gridH)
+    ctx.lineTo(x, gridY + gridH + tickH)
+    ctx.stroke()
+  }
+
+  // 左侧和右侧：行刻度
+  for (let row = 1; row <= height; row++) {
+    const y = gridY + row * CS
+    let tickW = 4, lineW = 0.5
+
+    if (row % 10 === 0) {
+      tickW = 10
+      lineW = 1.2
+    } else if (row % 5 === 0) {
+      tickW = 7
+      lineW = 0.8
+    }
+
+    // 左侧刻度
+    ctx.strokeStyle = TICK_COLOR
+    ctx.lineWidth = lineW
+    ctx.beginPath()
+    ctx.moveTo(gridX - tickW, y)
+    ctx.lineTo(gridX, y)
+    ctx.stroke()
+
+    // 右侧刻度
+    ctx.beginPath()
+    ctx.moveTo(gridX + gridW, y)
+    ctx.lineTo(gridX + gridW + tickW, y)
+    ctx.stroke()
+  }
+}
+
 // ─── Main export function ─────────────────────────────────────────────────────
 
 /**
@@ -314,6 +379,9 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   drawRuler(MH, gridY, RW, gridH, 'row', height, rowStep)
   drawRuler(gridX + gridW, gridY, RW, gridH, 'row', height, rowStep)
 
+  // ── 7.5. Grid edge tick marks ────────────────────────────────────────────
+  drawTickMarks(ctx, gridX, gridY, gridW, gridH, width, height, CS)
+
   // ── 8. Legend (real brand codes + counts) ─────────────────────────────────
   if (legendRows > 0) {
     const lgY = gridY + gridH + RH
@@ -414,11 +482,31 @@ export function drawProfessionalTemplate(opts: TemplateOptions): HTMLCanvasEleme
   ctx.fillRect(0, wmY, canvasW, WM_H)
   drawHLine(ctx, 0, wmY, canvasW, WINE_BORDER, 0.5)
 
-  ctx.fillStyle = `${WINE}cc`  // 80% opacity — clear brand credit
-  ctx.font = `bold 11px ${FF}`
+  ctx.fillStyle = 'rgba(138, 21, 56, 0.56)'  // Wine-red with subtle opacity
+  ctx.font = `10px ${FF}`
   ctx.textAlign = 'right'
   ctx.textBaseline = 'middle'
   ctx.fillText(`哆啦拼豆图纸 · ${date}`, canvasW - MH, wmY + WM_H / 2)
+
+  // Watermark pattern (diagonal text overlay) — subtle, non-intrusive, with corner coverage
+  ctx.save()
+  ctx.globalAlpha = 0.15
+  ctx.font = `bold 18px ${FF}`
+  ctx.fillStyle = WINE
+  ctx.rotate((-25 * Math.PI) / 180)
+
+  const wmText = '哆啦拼豆图纸'
+  const wmSpacing = 180
+  // Extended range to cover all four corners
+  const wmStartX = -canvasW * 0.5
+  const wmStartY = -canvasH * 0.3
+
+  for (let x = wmStartX; x < canvasW * 1.5; x += wmSpacing) {
+    for (let y = wmStartY; y < canvasH * 1.3; y += wmSpacing) {
+      ctx.fillText(wmText, x, y)
+    }
+  }
+  ctx.restore()
 
   return canvas
 }

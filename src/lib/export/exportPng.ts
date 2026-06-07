@@ -120,10 +120,11 @@ export function exportPatternAsPng(
   const d = new Date().toISOString().slice(0, 10)
   const mirrorLabel = mirror ? ' [镜像]' : ''
   ctx.fillStyle = 'rgba(0,0,0,0.30)'
-  ctx.font = '13px sans-serif'
+  ctx.font = '11px sans-serif'
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
   ctx.fillText(`${brand} · ${width}×${height} 格${mirrorLabel} · ${d}`, 14, height * cs + WM_H / 2)
-  ctx.font = 'bold 13px sans-serif'
+  ctx.fillStyle = 'rgba(138, 21, 56, 0.56)'
+  ctx.font = '10px sans-serif'
   ctx.textAlign = 'right'
   ctx.fillText('哆啦拼豆图纸', cw - 14, height * cs + WM_H / 2)
 
