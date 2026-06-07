@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## v0.8.0 - [Planning] - Tencent Cloud Data Storage Migration
+
+### 📋 规划中
+- 腾讯云数据存储迁移方案
+- 数据库表设计和 API 规划
+- 用户数据从 JSON 迁移到数据库
+- 会员、AI次数、作品从 localStorage 迁移到后端
+
+---
+
+## v0.7.8 - workspace-ai-optimizer-mvp - 2026-06-08
+
+### ✨ 核心改进
+
+**工作台 AI 图片优化 MVP 完整闭环**：
+- ✅ 工作台 AI 图片优化新增独立文件上传入口
+- ✅ 支持 JPG/PNG/WEBP 格式，最大 5MB
+- ✅ 上传后实时显示图片预览和文件名
+- ✅ 支持切换优化方式（10个预设）
+- ✅ Mock 模式下优化完成后显示结果图
+- ✅ 新增"用此图生成拼豆图纸"按钮，优化图导入工作台主流程
+- ✅ 新增"下载优化图"功能（dora-ai-optimized-时间戳.png）
+- ✅ 新增"继续优化"按钮，支持重新选择优化方式
+
+**代码和版本**:
+- ✅ 前后端版本号统一更新到 0.7.8
+- ✅ 所有敏感文件安全（.env.local、users.json 已加入 .gitignore）
+
+---
+
+## v0.7.7 - tencent-hunyuan-real-ai - 2026-06-07
+
+### ✨ 核心改进
+
+**腾讯混元真实 AI 优化集成**：
+- ✅ 实现 tencentcloud-sdk-nodejs 真实调用
+- ✅ ImageToImage 接口用于风格转换和拼豆优化
+- ✅ RefineImage 接口用于提高清晰度
+- ✅ 后端正确识别 real 模式并调用真实 SDK
+- ✅ 修复 AI 优化页面仍显示 Mock 的问题
+- ✅ 动态显示运行模式指示（Mock/Real）
+
+**工作台改名和改进**:
+- ✅ 工作台 AI 增强改名为 AI 图片优化
+- ✅ 改进优化方式文案和分类
+- ✅ 移除灰色不可用按钮，所有选项都可点击
+
+---
+
 ## v0.7.6 - real-auth-foundation - 2026-06-07
 
 ### ✨ 核心改进
