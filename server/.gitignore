@@ -28,3 +28,5 @@ npm-debug.log*
 
 # User data (local development)
 data/users.json
+
+/generated/prisma

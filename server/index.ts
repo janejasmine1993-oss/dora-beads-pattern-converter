@@ -4,6 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import { aiStyleRouter } from './routes/aiStyle'
 import { authRouter } from './routes/auth'
+import { prisma } from './services/db'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -17,21 +18,33 @@ app.get('/health', (req, res) => {
   res.json({
     ok: true,
     service: 'dora-beads-ai-server',
-    version: '0.7.3',
+    version: '0.8.0-a',
     timestamp: new Date().toISOString(),
   })
 })
 
-// AI 健康检查（带 provider 信息）
-app.get('/api/health', (req, res) => {
+// AI 健康检查（带 provider 和数据库信息）
+app.get('/api/health', async (req, res) => {
   const runtimeMode = process.env.AI_RUNTIME_MODE || 'mock'
   const provider = process.env.AI_PROVIDER || 'mock'
   const hasKeys = !!(process.env.TENCENT_SECRET_ID && process.env.TENCENT_SECRET_KEY)
 
+  let dbConnected = false
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    dbConnected = true
+  } catch {
+    dbConnected = false
+  }
+
   res.json({
     ok: true,
     service: 'dora-beads-ai-server',
-    version: '0.7.3',
+    version: '0.8.0-a',
+    database: {
+      connected: dbConnected,
+      provider: 'postgresql',
+    },
     ai: {
       runtimeMode,
       provider,

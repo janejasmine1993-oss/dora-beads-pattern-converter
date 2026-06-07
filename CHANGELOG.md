@@ -1,12 +1,57 @@
 # CHANGELOG
 
-## v0.8.0 - [Planning] - Tencent Cloud Data Storage Migration
+## v0.8.0-a - database-connection-and-schema - 2026-06-08
 
-### 📋 规划中
-- 腾讯云数据存储迁移方案
-- 数据库表设计和 API 规划
-- 用户数据从 JSON 迁移到数据库
-- 会员、AI次数、作品从 localStorage 迁移到后端
+### ✨ 核心改进
+
+**PostgreSQL + Prisma 数据库基础架构**：
+- ✅ 安装 Prisma 5 ORM 和 PostgreSQL 驱动
+- ✅ 创建 6 张数据库表的 Schema（Prisma models）
+  - users（用户认证）
+  - memberships（会员权限）
+  - ai_credits（AI 次数）
+  - works（拼豆作品）
+  - ai_jobs（AI 优化任务）
+  - uploaded_images（文件管理）
+- ✅ 运行 Prisma migrate 创建所有表和索引
+- ✅ 本地 PostgreSQL 18 连接成功
+- ✅ 创建 server/services/db.ts 数据库客户端单例
+- ✅ 创建 server/scripts/check-db.ts 数据库连接测试脚本
+- ✅ 新增 `npm run db:check` 脚本
+
+**后端改进**：
+- ✅ /api/health 健康检查新增 database 状态
+- ✅ 数据库连接状态实时检测（无需手动配置）
+- ✅ 版本号更新到 0.8.0-a
+
+**安全特性**：
+- ✅ DATABASE_URL 只在 .env（自动加载）和 .env.local
+- ✅ 敏感配置文件保持不被 Git 跟踪
+- ✅ Auth 仍使用 users.json（未迁移）
+
+**不做的事**：
+- ❌ 暂未迁移现有 Auth 系统（保留 users.json）
+- ❌ 暂未迁移会员和 AI 次数（保留 localStorage）
+- ❌ 暂未迁移作品数据（保留 localStorage）
+- ❌ 暂未接入 COS 文件存储
+- ❌ 暂未进行数据迁移（本地测试数据）
+
+### 🔧 技术细节
+
+**Prisma 配置**：
+- schema.prisma: 6 张表的完整 Model 定义（cuid() 主键、关系、索引）
+- .env: DATABASE_URL 指向本地 PostgreSQL（postgresql://jasmine@localhost/dora_dev）
+- PrismaClient 单例模式避免连接泄漏
+
+**数据库表结构**：
+- 所有字段使用 snake_case（通过 @map 映射）
+- 所有时间戳使用 UTC DateTime
+- User 与其他表 1:1（membership, aiCredits）或 1:N（works, aiJobs, uploadedImages）关系
+
+**前后端版本**：
+- 前端: 0.8.0
+- 后端: 0.8.0
+- package.json 统一版本号
 
 ---
 
