@@ -1,29 +1,75 @@
 import { useState, useEffect } from 'react'
 import type { User } from '../types/user'
+import { getAuthProvider } from '../services/auth/authProviderFactory'
 import { authMockService } from '../services/mock/authMockService'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [token, setToken] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const provider = getAuthProvider()
 
   // 初始化用户状态
   useEffect(() => {
-    const currentUser = authMockService.getCurrentUser()
-    setUser(currentUser)
-    setIsLoggedIn(currentUser !== null)
-    setIsLoading(false)
+    const init = async () => {
+      const currentUser = await provider.getCurrentUser()
+      const currentToken = provider.getToken()
+      setUser(currentUser)
+      setToken(currentToken)
+      setIsLoggedIn(currentUser !== null)
+      setIsLoading(false)
+    }
+    init()
   }, [])
 
   const login = () => {
-    const user = authMockService.mockLogin()
-    setUser(user)
+    // Mock 模式兼容：直接调用 mockLogin
+    const mockUser = authMockService.mockLogin()
+    setUser(mockUser)
     setIsLoggedIn(true)
   }
 
-  const logout = () => {
-    authMockService.mockLogout()
+  const loginWithEmail = async (email: string, password: string) => {
+    setIsSubmitting(true)
+    try {
+      const result = await provider.login(email, password)
+      if (result.success && result.user && result.token) {
+        setUser(result.user)
+        setToken(result.token)
+        setIsLoggedIn(true)
+        return { success: true }
+      } else {
+        return { success: false, error: result.error || '登录失败' }
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const register = async (email: string, password: string, nickname: string) => {
+    setIsSubmitting(true)
+    try {
+      const result = await provider.register(email, password, nickname)
+      if (result.success && result.user && result.token) {
+        setUser(result.user)
+        setToken(result.token)
+        setIsLoggedIn(true)
+        return { success: true }
+      } else {
+        return { success: false, error: result.error || '注册失败' }
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const logout = async () => {
+    await provider.logout()
     setUser(null)
+    setToken(null)
     setIsLoggedIn(false)
   }
 
@@ -31,7 +77,11 @@ export function useAuth() {
     user,
     isLoggedIn,
     isLoading,
+    isSubmitting,
+    token,
     login,
+    loginWithEmail,
+    register,
     logout,
   }
 }

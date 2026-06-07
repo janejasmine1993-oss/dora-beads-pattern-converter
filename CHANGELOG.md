@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## v0.7.6 - real-auth-foundation - 2026-06-07
+
+### ✨ 核心改进
+
+**真实邮箱密码登录系统基础版**：
+- ✅ 后端新增真实认证 API：POST /api/auth/register、POST /api/auth/login、GET /api/auth/me、POST /api/auth/logout
+- ✅ 密码使用 bcryptjs hash 存储，不保存明文
+- ✅ JWT token 管理登录状态，7 天有效期
+- ✅ 本地 JSON 文件存储用户数据（开发专用）
+- ✅ 前端认证 provider pattern（mock vs real）
+- ✅ 用户中心"状态"Tab 支持真实登录/注册表单
+- ✅ Real 模式下显示邮箱密码登录界面，注册后立即登录
+- ✅ AI 优化页面内嵌登录表单，登录后自动继续优化
+- ✅ 刷新页面后保持登录状态（localStorage token + user）
+- ✅ 保留 Mock 模式作为开发后备
+
+**环保要求**：
+- ✅ JWT_SECRET 只在 server/.env.local，不进代码
+- ✅ 统一错误提示"邮箱或密码错误"，不泄露具体信息
+- ✅ .env.local 已在 .gitignore
+
+**向后兼容**：
+- ✅ 图纸生成、AI 优化核心逻辑保持不变
+- ✅ Mock 模式完全保留
+- ✅ 现有会员 / 次数 / 作品系统保持兼容
+
+---
+
 ## v0.7.5 - ai-optimization-workflow-redesign - 2026-06-07
 
 ### ✨ 核心改进

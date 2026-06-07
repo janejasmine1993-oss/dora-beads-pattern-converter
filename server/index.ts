@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' })  // 加载 .env.local 文件
 import express from 'express'
 import cors from 'cors'
 import { aiStyleRouter } from './routes/aiStyle'
+import { authRouter } from './routes/auth'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -43,6 +44,9 @@ app.get('/api/health', (req, res) => {
 
 // AI 风格化路由
 app.use('/api/ai-style', aiStyleRouter)
+
+// Auth 路由
+app.use('/api/auth', authRouter)
 
 // 错误处理中间件
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -18,7 +18,7 @@ interface UserCenterProps {
 
 export function UserCenter({ onClose }: UserCenterProps) {
   const [activeTab, setActiveTab] = useState<Tab>('status')
-  const { user, isLoggedIn, login, logout } = useAuth()
+  const { user, isLoggedIn, isSubmitting, login, loginWithEmail, register, logout } = useAuth()
   const { membership, daysUntilExpiry, upgradeMembership, getBenefits, getAllLevels } = useMembership(user?.id)
   const { credits } = useCredits(user?.id)
   const { availableCodes, redeemHistory, isProcessing: isProcessingRedeem, redeem } = useRedeemCode(user?.id)
@@ -77,7 +77,15 @@ export function UserCenter({ onClose }: UserCenterProps) {
         {/* 内容区域 */}
         <div className="p-4">
           {activeTab === 'status' && (
-            <UserStatusCard user={user} isLoggedIn={isLoggedIn} onLogin={login} onLogout={logout} />
+            <UserStatusCard
+              user={user}
+              isLoggedIn={isLoggedIn}
+              isSubmitting={isSubmitting}
+              onLogin={login}
+              onLoginWithEmail={loginWithEmail}
+              onRegister={register}
+              onLogout={logout}
+            />
           )}
 
           {activeTab === 'membership' && (

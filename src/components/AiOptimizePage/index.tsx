@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useCredits } from '../../hooks/useCredits'
 import { useAiStyle } from '../../hooks/useAiStyle'
 import { aiRuntimeConfig } from '../../services/ai/aiRuntimeConfig'
+import { authRuntimeConfig } from '../../services/auth/authRuntimeConfig'
 import type { AiStyleSourceImage, AiStyleResult } from '../../types/aiStyle'
 
 interface AiOptimizePageProps {
@@ -21,7 +22,7 @@ const stylePresetCategories = [
 ]
 
 export function AiOptimizePage({ onBack, onUseResultInWorkspace, currentWorkspaceImage }: AiOptimizePageProps) {
-  const { user, isLoggedIn, login } = useAuth()
+  const { user, isLoggedIn, isSubmitting, login, loginWithEmail } = useAuth()
   const { credits } = useCredits(user?.id)
   const { presets, isProcessing, error: styleError, processStyle } = useAiStyle(user?.id)
 
@@ -33,8 +34,12 @@ export function AiOptimizePage({ onBack, onUseResultInWorkspace, currentWorkspac
   const [showLoginGate, setShowLoginGate] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [statusType, setStatusType] = useState<'info' | 'error' | 'success'>('info')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState<string | null>(null)
 
   const isRealMode = aiRuntimeConfig.mode === 'real'
+  const isRealAuthMode = authRuntimeConfig.mode === 'real'
 
   useEffect(() => {
     if (currentWorkspaceImage && !selectedImage) {
@@ -244,21 +249,82 @@ export function AiOptimizePage({ onBack, onUseResultInWorkspace, currentWorkspac
           {/* Login gate */}
           {showLoginGate && (
             <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4">
-              <p className="text-sm text-yellow-900 mb-3">请先登录后再使用 AI 优化功能</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { login(); setShowLoginGate(false) }}
-                  className="flex-1 px-3 py-2 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
-                >
-                  去登录
-                </button>
-                <button
-                  onClick={() => setShowLoginGate(false)}
-                  className="flex-1 px-3 py-2 text-xs bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                >
-                  取消
-                </button>
-              </div>
+              {isRealAuthMode ? (
+                // Real 模式：内嵌登录表单
+                <>
+                  <p className="text-sm font-semibold text-yellow-900 mb-3">🔒 请先登录</p>
+                  {loginError && (
+                    <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                      {loginError}
+                    </div>
+                  )}
+                  <div className="space-y-2 mb-3">
+                    <input
+                      type="email"
+                      placeholder="邮箱"
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                    />
+                    <input
+                      type="password"
+                      placeholder="密码"
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        setLoginError(null)
+                        const result = await loginWithEmail(loginEmail, loginPassword)
+                        if (result.success) {
+                          setShowLoginGate(false)
+                          setLoginEmail('')
+                          setLoginPassword('')
+                        } else {
+                          setLoginError(result.error || '登录失败')
+                        }
+                      }}
+                      disabled={isSubmitting || !loginEmail || !loginPassword}
+                      className="flex-1 px-2 py-1.5 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                    >
+                      {isSubmitting ? '登录中...' : '登录'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLoginGate(false)
+                        setLoginEmail('')
+                        setLoginPassword('')
+                        setLoginError(null)
+                      }}
+                      className="flex-1 px-2 py-1.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                    >
+                      稍后再说
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // Mock 模式：原有行为
+                <>
+                  <p className="text-sm text-yellow-900 mb-3">请先登录后再使用 AI 优化功能</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { login(); setShowLoginGate(false) }}
+                      className="flex-1 px-3 py-2 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
+                    >
+                      去登录
+                    </button>
+                    <button
+                      onClick={() => setShowLoginGate(false)}
+                      className="flex-1 px-3 py-2 text-xs bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
