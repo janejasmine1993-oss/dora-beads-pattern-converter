@@ -593,7 +593,7 @@ function App() {
             <div className="space-y-1">
               {([
                 { id: 'photo-direct' as const, label: '📸 直接拍照' },
-                { id: 'ai-enhanced' as const, label: '🤖 AI 增强' },
+                { id: 'ai-enhanced' as const, label: '🤖 AI 图片优化' },
                 { id: 'pixel-grid' as const, label: '🔲 像素识别' },
                 { id: 'existing-pattern' as const, label: '📋 既有图纸' },
               ] as Array<{ id: ImportMode; label: string }>).map(mode => {
