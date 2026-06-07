@@ -1,5 +1,100 @@
 # CHANGELOG
 
+## v0.7.4-tencent-hunyuan-real-sdk - 2026-06-07
+
+### 🎯 版本目标
+
+在 v0.7.3 Provider 框架基础上，实现真实腾讯混元 SDK 调用。跑通完整的真实 AI 图像处理链路。
+
+**✅ 关键改进**：v0.7.3 中的 TODO 占位和 mock URL 已全部替换为真实 SDK 调用。
+
+### ✨ 核心实现
+
+**腾讯混元 SDK 真实调用**：
+- ✅ ImageToImage 真实 API 调用（图像风格化）
+- ✅ RefineImage 真实 API 调用（图片变清晰）
+- ✅ 使用 tencentcloud-sdk-nodejs 官方 SDK
+- ✅ 支持 ESM/CommonJS 双模式加载
+
+**接口参数完整**：
+- ✅ ImageToImage 参数：InputImage、Prompt、NegativePrompt、Styles、Strength、RspImgType、LogoAdd、ResultConfig、EnhanceImage、RestoreFace
+- ✅ RefineImage 参数：InputImage、RspImgType
+- ✅ 所有参数符合腾讯云官方 AIART API 要求
+
+**真实返回处理**：
+- ✅ 成功时返回腾讯云 ResultImage（图片 URL）
+- ✅ 记录腾讯云 RequestId 用于问题排查
+- ✅ 错误时转换为用户友好的提示文字
+
+**11 个 Preset 完整覆盖**：
+- ✅ pixel-clean（干净像素风）→ ImageToImage ✅ 真实
+- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage ✅ 真实
+- ✅ cute-cartoon（Q 版卡通）→ ImageToImage ✅ 真实
+- ✅ watercolor（水彩风）→ ImageToImage ✅ 真实
+- ✅ illustration（插画风格）→ ImageToImage ✅ 真实
+- ✅ anime-soft（柔和动漫风）→ ImageToImage ✅ 真实
+- ✅ clean-background（清理杂乱背景）→ ImageToImage ✅ 真实
+- ✅ remove-background（背景简化）→ ImageToImage ✅ 真实
+- ✅ color-optimize（颜色优化）→ ImageToImage ✅ 真实
+- ✅ reduce-noise（减少杂色）→ ImageToImage ✅ 真实
+- ✅ enhance-clarity（提高清晰度）→ RefineImage ✅ 真实
+
+**错误处理完善**：
+- ✅ 缺少密钥：提示检查 server/.env.local
+- ✅ 鉴权失败：提示检查 SecretId/SecretKey
+- ✅ 权限不足：提示检查腾讯云控制台和 CAM 授权
+- ✅ 欠费：提示检查账户状态
+- ✅ 审核失败：提示更换图片或调整描述
+- ✅ 限流：提示稍后再试
+- ✅ 参数错误：提示图片格式/大小/分辨率问题
+
+**次数扣除规则**：
+- ✅ 腾讯云真实返回后才扣次数
+- ✅ 失败不扣次数
+- ✅ 缺 Key 不扣次数
+- ✅ 权限错误不扣次数
+
+**安全特性**：
+- ✅ API Key 仅在 server/.env.local
+- ✅ 前端代码中零 Key 暴露
+- ✅ 日志不打印完整 Key 和 base64 图片
+- ✅ RequestId 打印用于问题排查（不含敏感信息）
+
+### 📊 与 v0.7.3 的对比
+
+| 功能 | v0.7.3 | v0.7.4 |
+|------|--------|--------|
+| Provider 框架 | ✅ | ✅ |
+| 真实 SDK 调用 | ❌ | ✅ |
+| ImageToImage 调用 | ❌ (TODO) | ✅ |
+| RefineImage 调用 | ❌ (TODO) | ✅ |
+| 返回真实 ResultImage | ❌ (mock URL) | ✅ |
+| 腾讯云 RequestId 支持 | ❌ | ✅ |
+| 完整错误映射 | ✅ | ✅ |
+| 次数只在成功后扣 | ✅ (逻辑) | ✅ (真实) |
+
+### 🔧 关键代码变更
+
+**tencentHunyuanProvider.ts**：
+- 移除了所有 TODO 注释和占位实现
+- 实现了 `handleImageToImage()` 真实 SDK 调用
+- 实现了 `handleRefineImage()` 真实 SDK 调用
+- 使用 `tencentcloud-sdk-nodejs` 的 `aiart.v20221229.Client`
+- 完整的参数构造和响应处理
+
+### 📋 后续版本计划
+
+无新的 TODO 项。v0.7.4 已经完整实现了腾讯混元 SDK 集成。
+
+后续可考虑（v0.8+）：
+- 其他 Provider（火山引擎、阿里云、OpenAI）
+- 用户认证和速率限制
+- 成本监控和告警
+- 调用日志记录
+- 图片本地缓存
+
+---
+
 ## v0.7.3-tencent-hunyuan-provider - 2026-06-07
 
 ### 🎯 版本目标

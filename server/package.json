@@ -1,6 +1,6 @@
 {
   "name": "dora-beads-server",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "type": "module",
   "description": "Backend proxy for AI style API",
   "main": "dist/index.js",
