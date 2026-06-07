@@ -5,194 +5,211 @@ interface HomePageProps {
   onSelectMode: (mode: ImportMode) => void
 }
 
-interface ModeCard {
+interface FeatureCard {
   id: ImportMode
-  label: string
   title: string
+  label: string
   description: string
-  bgColor: string
-  bgGradient: string
+  image: string
+  arrowClass: string
+  labelBgColor: string
 }
 
-const modes: ModeCard[] = [
+const HOME_ASSET_PATH = '/assets/home'
+
+const featureCards: FeatureCard[] = [
   {
     id: 'photo-direct',
-    label: '最常用',
     title: '图片直转图纸',
+    label: '最常用',
     description: '上传任意照片，自动匹配品牌色号，一键生成可打印的专业拼豆图纸。',
-    bgColor: 'from-pink-100 to-pink-50',
-    bgGradient: 'from-pink-500 to-pink-400',
+    image: `${HOME_ASSET_PATH}/feature-card-direct.png`,
+    arrowClass: 'from-[#ff3f78] to-[#ff78a7]',
+    labelBgColor: 'bg-[#ff3f78]',
   },
   {
     id: 'ai-enhanced',
-    label: '推荐',
     title: 'AI 优化后转图纸',
-    description: '先用 AI 去背景或风格化处理图片，再转成图纸，主体更干净，颜色更准。',
-    bgColor: 'from-orange-100 to-orange-50',
-    bgGradient: 'from-orange-500 to-orange-400',
+    label: '推荐',
+    description: '先用 AI 去背景或风格化处理图片，再转成图纸，主体更清晰，颜色更准确。',
+    image: `${HOME_ASSET_PATH}/feature-card-ai.png`,
+    arrowClass: 'from-[#ff9f25] to-[#ffbd4a]',
+    labelBgColor: 'bg-[#ff9f25]',
   },
   {
     id: 'pixel-grid',
-    label: '工具',
     title: '像素图转色号',
+    label: '工具',
     description: '上传已有像素格子图，通过格子校准精确对齐，自动识别并匹配最合适的品牌色号。',
-    bgColor: 'from-green-100 to-green-50',
-    bgGradient: 'from-green-500 to-green-400',
+    image: `${HOME_ASSET_PATH}/feature-card-pixel.png`,
+    arrowClass: 'from-[#44c7a9] to-[#70dcc6]',
+    labelBgColor: 'bg-[#44c7a9]',
   },
   {
     id: 'existing-pattern',
+    title: '现有图纸再编辑',
     label: '进阶',
-    title: '已有图纸再编辑',
-    description: '导入旧版拼豆图纸，还原为可编辑格子矩阵，重新修改并导出，创作更自由。',
-    bgColor: 'from-purple-100 to-purple-50',
-    bgGradient: 'from-purple-500 to-purple-400',
+    description: '导入旧版拼豆图纸，为可编辑格子矩阵，重新修改并导出，创作更自由。',
+    image: `${HOME_ASSET_PATH}/feature-card-edit.png`,
+    arrowClass: 'from-[#8c55ff] to-[#bb63ff]',
+    labelBgColor: 'bg-[#8c55ff]',
   },
 ]
 
-export function HomePage({ onStartCreating, onSelectMode }: HomePageProps) {
-  function handleModeSelect(mode: ImportMode) {
-    onSelectMode(mode)
-  }
+const tagItems = [
+  '品牌色号精准匹配',
+  'AI 智能优化',
+  '自由编辑调整',
+  '多格式专业导出',
+]
+
+function HomeHero({ onStartCreating }: { onStartCreating: () => void }) {
+  return (
+    <section className="relative">
+      <div className="mx-auto max-w-[1448px]">
+        <div className="relative min-h-[482px] overflow-hidden bg-[#fff7f6] md:min-h-[485px]">
+          <img
+            src={`${HOME_ASSET_PATH}/hero-illustration.png`}
+            alt="拼豆创作插画"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+
+          <div className="relative z-10 flex min-h-[482px] max-w-[760px] flex-col justify-center px-7 py-16 sm:px-12 md:min-h-[485px] md:px-[92px]">
+            <h1 className="max-w-[720px] text-[42px] font-black leading-[1.08] tracking-normal text-[#102b45] drop-shadow-[0_2px_0_rgba(255,255,255,0.85)] sm:text-[54px] md:whitespace-nowrap md:text-[62px]">
+              图片一键转
+              <span className="text-[#f82d69]">拼豆图纸</span>
+            </h1>
+            <p className="mt-5 max-w-[690px] text-base font-semibold leading-relaxed text-[#315d84] sm:text-[21px] md:whitespace-nowrap">
+              支持品牌色号匹配 · AI 优化处理 · 图纸自由编辑 · 专业导出
+            </p>
+
+            <div className="mt-9 flex flex-wrap gap-5">
+              <button
+                onClick={onStartCreating}
+                className="inline-flex min-h-16 items-center justify-center gap-4 rounded-full bg-gradient-to-r from-[#ff2d70] to-[#ff4a83] px-9 text-lg font-bold text-white shadow-[0_16px_32px_rgba(247,45,105,0.32)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(247,45,105,0.38)]"
+              >
+                <span aria-hidden="true">✦</span>
+                开始制作图纸
+                <span aria-hidden="true" className="text-2xl leading-none">→</span>
+              </button>
+              <button
+                onClick={() => document.getElementById('home-features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex min-h-16 items-center justify-center gap-3 rounded-full border-2 border-[#ff5c90] bg-white/84 px-8 text-lg font-bold text-[#f72d6a] shadow-[0_10px_24px_rgba(255,110,150,0.12)] backdrop-blur transition hover:-translate-y-0.5 hover:bg-white"
+              >
+                <span aria-hidden="true">▣</span>
+                查看功能介绍
+              </button>
+            </div>
+
+            <div className="mt-10 grid max-w-[720px] grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap">
+              {tagItems.map((tag, index) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#4e6682]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      'flex h-8 w-8 items-center justify-center rounded-xl bg-white/82 text-base shadow-[0_5px_15px_rgba(242,78,132,0.14)]',
+                      index === 0 ? 'text-[#f94c7d]' : '',
+                      index === 1 ? 'text-[#9d67ff]' : '',
+                      index === 2 ? 'text-[#4b9ef0]' : '',
+                      index === 3 ? 'text-[#945dff]' : '',
+                    ].join(' ')}
+                  >
+                    {['◉', '✦', '✎', '▤'][index]}
+                  </span>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function HomeFeatureCards({ onSelectMode }: { onSelectMode: (mode: ImportMode) => void }) {
+  return (
+    <section id="home-features" className="px-6 py-6 sm:px-8">
+      <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {featureCards.map(card => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onSelectMode(card.id)}
+            className="group relative aspect-[1.08/1] overflow-hidden rounded-[24px] border border-white/90 bg-white text-left shadow-[0_14px_34px_rgba(100,86,111,0.11)] transition hover:-translate-y-1 hover:shadow-[0_20px_44px_rgba(100,86,111,0.16)]"
+          >
+            <img
+              src={card.image}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <h2 className="absolute left-7 right-[88px] top-[30px] z-10 text-center text-[21px] font-black leading-tight text-[#182942]">
+              {card.title}
+            </h2>
+            <span className={`absolute right-[34px] top-[28px] z-10 inline-flex h-[26px] items-center justify-center rounded-full px-[14px] text-center text-[13px] font-bold leading-none text-white ${card.labelBgColor}`}>
+              {card.label}
+            </span>
+            <p className="absolute bottom-[38px] left-7 z-10 max-w-[218px] text-[15px] font-semibold leading-[1.72] text-[#48647f]">
+              {card.description}
+            </p>
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute z-20 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br ${card.arrowClass} text-[38px] font-bold leading-none text-white shadow-[0_10px_24px_rgba(0,0,0,0.12)] ring-[4px] ring-white ring-opacity-90 transition right-[22px] bottom-[22px] group-hover:translate-x-1`}
+            >
+              →
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function HomeSloganStrip() {
+  const sellingPoints = ['精准色号匹配', '专业图纸输出', '轻松上手使用']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
-      {/* Decorative background shapes */}
-      <div className="absolute top-20 right-10 w-72 h-72 bg-gradient-to-br from-pink-200 to-pink-100 rounded-full opacity-20 blur-3xl" />
-      <div className="absolute bottom-40 left-10 w-96 h-96 bg-gradient-to-br from-purple-200 to-purple-100 rounded-full opacity-20 blur-3xl" />
-
-      {/* Hero Section */}
-      <section className="py-16 md:py-24 px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <div>
-              <div className="mb-4 inline-block px-3 py-1 bg-pink-200 rounded-full text-xs font-semibold text-pink-700">
-                ✨ 开启拼豆创作新体验
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                <span className="text-gray-900">图片一键转</span>
-                <span className="bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent"> 拼豆图纸</span>
-              </h1>
-              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                支持品牌色号匹配 · AI 优化处理 · 图纸自由编辑 · 专业导出
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={onStartCreating}
-                  className="px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-full hover:shadow-lg transition-all transform hover:scale-105 text-base"
-                >
-                  开始制作图纸 →
-                </button>
-                <button
-                  onClick={onStartCreating}
-                  className="px-8 py-3 bg-white text-pink-600 font-semibold rounded-full border-2 border-pink-300 hover:bg-pink-50 transition-all text-base"
-                >
-                  查看功能介绍
-                </button>
-              </div>
-            </div>
-
-            {/* Right Visual */}
-            <div className="relative h-96 flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-300 to-purple-300 rounded-3xl opacity-10 blur-2xl" />
-              <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                  src="/src/assets/hero.png"
-                  alt="拼豆视觉"
-                  className="max-w-xs drop-shadow-lg hover:drop-shadow-xl transition-all"
-                />
-              </div>
+    <section className="px-6 pb-10 pt-4 sm:px-8">
+      <div className="mx-auto max-w-[1368px]">
+        <div className="relative min-h-[104px] overflow-hidden rounded-[32px]">
+          <img
+            src={`${HOME_ASSET_PATH}/slogan-strip.png`}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+          <div className="relative z-10 flex min-h-[104px] flex-col items-center justify-center gap-5 px-8 py-6 lg:flex-row lg:justify-end lg:gap-16 lg:pl-[260px] lg:pr-14">
+            <h2 className="text-center text-[22px] font-black leading-tight text-[#ff2f70] sm:text-[26px]">
+              让每一颗拼豆，都更有创意与温度
+            </h2>
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-bold text-[#536c87] sm:text-base">
+              {sellingPoints.map((point, index) => (
+                <span key={point} className="inline-flex items-center gap-3">
+                  <span className="text-lg text-[#ff3f78]" aria-hidden="true">
+                    {['◉', '☆', '☺'][index]}
+                  </span>
+                  {point}
+                  {index < sellingPoints.length - 1 && (
+                    <span className="hidden h-5 w-px bg-[#91a6bd]/55 sm:inline-block" aria-hidden="true" />
+                  )}
+                </span>
+              ))}
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  )
+}
 
-      {/* Import Modes Section */}
-      <section className="py-16 px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-12">
-            四种导入方式
-          </h2>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {modes.map(mode => (
-              <div
-                key={mode.id}
-                onClick={() => handleModeSelect(mode.id)}
-                className="group cursor-pointer"
-              >
-                <div className={`bg-gradient-to-br ${mode.bgColor} rounded-3xl p-8 h-full border-2 border-white hover:border-pink-200 hover:shadow-xl transition-all transform hover:-translate-y-2`}>
-                  {/* Label Tag */}
-                  <div className={`inline-block px-3 py-1 bg-gradient-to-r ${mode.bgGradient} text-white rounded-full text-xs font-semibold mb-4`}>
-                    {mode.label}
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">
-                    {mode.title}
-                  </h3>
-
-                  {/* Description */}
-                  <p className="text-sm text-gray-700 mb-6 leading-relaxed">
-                    {mode.description}
-                  </p>
-
-                  {/* Arrow Button */}
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      handleModeSelect(mode.id)
-                    }}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 group-hover:text-pink-600 transition-colors"
-                  >
-                    进入 <span className="group-hover:translate-x-1 transition-transform">→</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Brand Slogan Section */}
-      <section className="py-16 px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-gradient-to-r from-pink-100 to-purple-100 rounded-3xl p-12 border-2 border-pink-200">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                  让每一颗拼豆，都更有创意与温度
-                </h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" />
-                    <span className="text-gray-700 font-medium">精准色号匹配</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" />
-                    <span className="text-gray-700 font-medium">专业图纸输出</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" />
-                    <span className="text-gray-700 font-medium">轻松上手使用</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-6xl">🐼</div>
-                <p className="text-sm text-gray-600 mt-2">熊猫陪伴您的创作</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 bg-gradient-to-r from-gray-900 to-gray-800 text-gray-400 text-center text-sm relative z-10">
-        <p className="font-medium">哆啦拼豆图纸转换器</p>
-        <p className="mt-2">品牌色号来自各厂商官方数据，仅用于学习参考</p>
-        <p className="mt-3 text-xs">v0.6.2 · 内测版本</p>
-      </footer>
-    </div>
+export function HomePage({ onStartCreating, onSelectMode }: HomePageProps) {
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#fff8f7_0%,#fffefe_42%,#fff7fb_100%)]">
+      <HomeHero onStartCreating={onStartCreating} />
+      <HomeFeatureCards onSelectMode={onSelectMode} />
+      <HomeSloganStrip />
+    </main>
   )
 }
