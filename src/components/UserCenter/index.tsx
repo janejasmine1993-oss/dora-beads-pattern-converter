@@ -13,10 +13,11 @@ type Tab = 'status' | 'membership' | 'works' | 'redeem'
 interface UserCenterProps {
   isOpen: boolean
   onClose: () => void
+  onAuthSuccess?: () => void
   currentWorkspaceImage?: { url: string; name: string }
 }
 
-export function UserCenter({ onClose }: UserCenterProps) {
+export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) {
   const [activeTab, setActiveTab] = useState<Tab>('status')
   const { user, isLoggedIn, isSubmitting, login, loginWithEmail, register, logout } = useAuth()
   const { membership, daysUntilExpiry, upgradeMembership, getBenefits, getAllLevels } = useMembership(user?.id)
@@ -35,6 +36,26 @@ export function UserCenter({ onClose }: UserCenterProps) {
       patternSize: { width: 32, height: 32 },
     })
   }
+
+  // 包装登录函数，成功后调用 onAuthSuccess
+  const handleLoginWithEmail = async (email: string, password: string) => {
+    const result = await loginWithEmail(email, password)
+    if (result.success) {
+      onAuthSuccess?.()
+    }
+    return result
+  }
+
+  // 包装注册函数，成功后调用 onAuthSuccess
+  const handleRegister = async (email: string, password: string, nickname: string) => {
+    const result = await register(email, password, nickname)
+    if (result.success) {
+      onAuthSuccess?.()
+    }
+    return result
+  }
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -82,8 +103,8 @@ export function UserCenter({ onClose }: UserCenterProps) {
               isLoggedIn={isLoggedIn}
               isSubmitting={isSubmitting}
               onLogin={login}
-              onLoginWithEmail={loginWithEmail}
-              onRegister={register}
+              onLoginWithEmail={handleLoginWithEmail}
+              onRegister={handleRegister}
               onLogout={logout}
             />
           )}

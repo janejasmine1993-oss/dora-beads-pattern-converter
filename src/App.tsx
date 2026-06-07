@@ -49,6 +49,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<AppPage>('home')
   const [comingSoonFeature, setComingSoonFeature] = useState<ComingSoonFeature>(null)
   const [isUserCenterOpen, setIsUserCenterOpen] = useState(false)
+  const [authReturnPage, setAuthReturnPage] = useState<AppPage | null>(null)
 
   // ── Import mode ──────────────────────────────────────────────────────────────
   const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
@@ -467,10 +468,28 @@ function App() {
 
   function handleFeatureClick(feature: ComingSoonFeature) {
     if (feature === 'login') {
+      setAuthReturnPage('workspace')
       setIsUserCenterOpen(true)
     } else {
       setComingSoonFeature(feature)
     }
+  }
+
+  // 登录/注册成功后处理
+  function handleAuthSuccess() {
+    setIsUserCenterOpen(false)
+    if (authReturnPage) {
+      setCurrentPage(authReturnPage)
+      setAuthReturnPage(null)
+    } else {
+      setCurrentPage('workspace')
+    }
+  }
+
+  // 需要登录时的处理
+  function handleRequireLogin() {
+    setAuthReturnPage('ai-optimize')
+    setIsUserCenterOpen(true)
   }
 
   function handleStartCreating() {
@@ -530,6 +549,7 @@ function App() {
         <AiOptimizePage
           onBack={() => setCurrentPage('home')}
           onUseResultInWorkspace={handleUseAiResultInWorkspace}
+          onRequireLogin={handleRequireLogin}
           currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
         />
       </>
@@ -881,6 +901,7 @@ function App() {
       <UserCenter
         isOpen={isUserCenterOpen}
         onClose={() => setIsUserCenterOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
         currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
       />
 

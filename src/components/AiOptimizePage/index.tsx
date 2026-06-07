@@ -10,6 +10,7 @@ import type { AiStyleSourceImage, AiStyleResult } from '../../types/aiStyle'
 interface AiOptimizePageProps {
   onBack: () => void
   onUseResultInWorkspace: (imageUrl: string) => void
+  onRequireLogin?: () => void
   currentWorkspaceImage?: { url: string; name: string }
 }
 
@@ -21,7 +22,7 @@ const stylePresetCategories = [
   { category: '风格转换', presetIds: ['bead-pattern', 'pixel-clean', 'qversion', 'illustration', 'watercolor', 'soft-anime'] },
 ]
 
-export function AiOptimizePage({ onBack, onUseResultInWorkspace, currentWorkspaceImage }: AiOptimizePageProps) {
+export function AiOptimizePage({ onBack, onUseResultInWorkspace, onRequireLogin, currentWorkspaceImage }: AiOptimizePageProps) {
   const { user, isLoggedIn, isSubmitting, login, loginWithEmail } = useAuth()
   const { credits } = useCredits(user?.id)
   const { presets, isProcessing, error: styleError, processStyle } = useAiStyle(user?.id)
@@ -311,7 +312,14 @@ export function AiOptimizePage({ onBack, onUseResultInWorkspace, currentWorkspac
                   <p className="text-sm text-yellow-900 mb-3">请先登录后再使用 AI 优化功能</p>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { login(); setShowLoginGate(false) }}
+                      onClick={() => {
+                        if (authRuntimeConfig.mode === 'real' && onRequireLogin) {
+                          onRequireLogin()
+                        } else {
+                          login()
+                        }
+                        setShowLoginGate(false)
+                      }}
                       className="flex-1 px-3 py-2 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
                     >
                       去登录
