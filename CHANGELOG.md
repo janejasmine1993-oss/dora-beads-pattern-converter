@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v0.8.0-c - membership-and-ai-credits-api - 2026-06-08
+
+### ✨ 核心改进
+
+**会员系统从 localStorage 迁移到 PostgreSQL API**：
+- ✅ 创建 server/services/membershipService.ts 会员业务逻辑
+- ✅ 新增 GET /api/membership/me 获取当前用户会员信息
+- ✅ 新增 POST /api/membership/dev-upgrade 开发期升级会员
+- ✅ 会员等级权益配置（free / monthly / yearly / lifetime）
+- ✅ 升级会员时自动同步 AI 次数 dailyTotal
+
+**AI 次数系统从 localStorage 迁移到 PostgreSQL API**：
+- ✅ 创建 server/services/creditsService.ts AI 次数业务逻辑
+- ✅ 新增 GET /api/credits/me 获取当前用户 AI 次数
+- ✅ 新增 POST /api/credits/consume 扣除 AI 次数
+- ✅ 新增 POST /api/credits/dev-reset 开发期重置次数
+- ✅ 自动跨天重置 dailyUsed
+- ✅ 优先扣除每日次数，不足时扣额外次数
+
+**API 安全特性**：
+- ✅ 所有会员和 AI 接口都需要 authMiddleware 认证
+- ✅ AI 次数必须在后端扣除（前端无法直接修改）
+- ✅ 开发接口（dev-upgrade / dev-reset）仅非 production 可用
+- ✅ 次数不足返回失败，不会出现负数
+- ✅ AI 调用成功后才扣次数，失败不扣
+
+**数据库同步**：
+- ✅ 升级会员时 ai_credits.dailyTotal 自动更新
+- ✅ 扣除次数时 ai_credits.daily_used 原子性更新
+- ✅ 跨天时自动重置 daily_used 和 reset_at
+
+**测试覆盖**：
+- ✅ 注册新用户自动创建 membership 和 ai_credits ✓
+- ✅ 获取会员信息返回权益配置 ✓
+- ✅ 获取 AI 次数返回详细额度 ✓
+- ✅ 扣除次数成功时更新数据库 ✓
+- ✅ 次数不足时返回失败 ✓
+- ✅ 开发期升级会员并同步次数 ✓
+- ✅ 开发接口在 production 被禁用 ✓
+
+**前端兼容性**：
+- ⚠️ 前端可直接调用新 API（无需改动现有登录流程）
+- ⚠️ 现有 localStorage 会员和次数作为 fallback（暂时保留）
+- ⚠️ 用户中心可改为显示服务端数据（可选）
+
+---
+
 ## v0.8.0-b - auth-postgresql-migration - 2026-06-08
 
 ### ✨ 核心改进

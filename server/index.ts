@@ -4,6 +4,8 @@ import express from 'express'
 import cors from 'cors'
 import { aiStyleRouter } from './routes/aiStyle'
 import { authRouter } from './routes/auth'
+import { membershipRouter } from './routes/membership'
+import { creditsRouter } from './routes/credits'
 import { prisma } from './services/db'
 
 const app = express()
@@ -60,6 +62,12 @@ app.use('/api/ai-style', aiStyleRouter)
 
 // Auth 路由
 app.use('/api/auth', authRouter)
+
+// 会员路由
+app.use('/api/membership', membershipRouter)
+
+// AI 次数路由
+app.use('/api/credits', creditsRouter)
 
 // 错误处理中间件
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
