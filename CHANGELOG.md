@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v0.8.0-b - auth-postgresql-migration - 2026-06-08
+
+### ✨ 核心改进
+
+**Auth 用户系统从 JSON 迁移到 PostgreSQL**：
+- ✅ 创建 server/services/dbUserStore.ts，替代 JSON 文件存储
+- ✅ POST /api/auth/register 现在写入 PostgreSQL users 表
+- ✅ 注册时自动创建默认 membership（level = free）
+- ✅ 注册时自动创建默认 ai_credits（dailyTotal = 5）
+- ✅ POST /api/auth/login 从 PostgreSQL users 表查询用户
+- ✅ 登录成功后更新 last_login_at 时间戳
+- ✅ GET /api/auth/me 从 PostgreSQL users 表读取当前用户
+- ✅ 所有 Auth API 保持前端兼容（无需前端改动）
+
+**API 兼容性**：
+- ✅ 注册请求/响应格式保持不变
+- ✅ 登录请求/响应格式保持不变
+- ✅ GET /me 响应格式保持不变
+- ✅ passwordHash 从不返回给前端
+
+**安全特性**：
+- ✅ 密码仍使用 bcryptjs hash（10 轮）
+- ✅ JWT Token 仍 7 天有效期
+- ✅ 邮箱唯一性在数据库层强制
+- ✅ 重复注册返回统一错误消息
+- ✅ 重复邮箱不会创建多个用户
+
+**数据库状态**：
+- ✅ users 表：存储用户认证信息
+- ✅ memberships 表：自动创建 free 级别会员
+- ✅ ai_credits 表：自动创建 5 次日免费额度
+- ✅ 前两张表由 users 表的 1:1 关系保证完整性
+
+**保留向后兼容**：
+- ⚠️ server/data/users.json 暂时保留但不再使用
+- ⚠️ server/services/userStore.ts 暂时保留但不再使用
+- 可在后续版本删除历史代码
+
+---
+
 ## v0.8.0-a - database-connection-and-schema - 2026-06-08
 
 ### ✨ 核心改进

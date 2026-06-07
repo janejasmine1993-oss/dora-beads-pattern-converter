@@ -1,7 +1,7 @@
 import express from 'express'
-import { randomBytes } from 'crypto'
+import { randomUUID } from 'crypto'
 import { hashPassword, verifyPassword, signToken } from '../services/authService'
-import { findUserByEmail, findUserById, createUser } from '../services/userStore'
+import { findUserByEmail, findUserById, createUser, updateLastLoginAt } from '../services/dbUserStore'
 import { authMiddleware, type AuthRequest } from '../middleware/authMiddleware'
 import type { RegisterRequest, LoginRequest, AuthUser, ErrorResponse } from '../types/auth'
 
@@ -24,17 +24,17 @@ authRouter.post('/register', async (req, res) => {
     }
 
     // 检查 email 是否已存在
-    const existingUser = findUserByEmail(email)
+    const existingUser = await findUserByEmail(email)
     if (existingUser) {
       return res.status(400).json({ success: false, error: '该邮箱已被注册' } as ErrorResponse)
     }
 
     // 密码 hash
     const passwordHash = await hashPassword(password)
-    const userId = `user_${Date.now()}_${randomBytes(4).toString('hex')}`
+    const userId = randomUUID()
 
     // 创建用户
-    const storedUser = createUser({
+    const storedUser = await createUser({
       id: userId,
       email,
       nickname,
@@ -76,7 +76,7 @@ authRouter.post('/login', async (req, res) => {
     }
 
     // 查找用户
-    const user = findUserByEmail(email)
+    const user = await findUserByEmail(email)
     if (!user) {
       return res.status(401).json({ success: false, error: '邮箱或密码错误' } as ErrorResponse)
     }
@@ -86,6 +86,9 @@ authRouter.post('/login', async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ success: false, error: '邮箱或密码错误' } as ErrorResponse)
     }
+
+    // 更新最后登录时间
+    await updateLastLoginAt(user.id)
 
     // 生成 token
     const token = signToken(user.id, user.email)
@@ -118,7 +121,7 @@ authRouter.get('/me', authMiddleware, async (req: AuthRequest, res) => {
     }
 
     // 查找用户
-    const user = findUserById(req.authUser.userId)
+    const user = await findUserById(req.authUser.userId)
     if (!user) {
       return res.status(404).json({ success: false, error: '用户不存在' } as ErrorResponse)
     }
