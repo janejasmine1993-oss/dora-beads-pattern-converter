@@ -1,5 +1,6 @@
 import express from 'express'
 import type { RealAiStyleRequest, RealAiStyleResult } from '../../src/services/ai/aiProviderTypes'
+import { getTencentHunyuanProvider } from '../services/providers/tencentHunyuanProvider'
 
 export const aiStyleRouter = express.Router()
 
@@ -12,7 +13,7 @@ aiStyleRouter.post('/generate', async (req: express.Request, res: express.Respon
     if (!body.presetId || !body.sourceImage) {
       return res.status(400).json({
         id: `error_${Date.now()}`,
-        provider: 'mock',
+        provider: 'unknown',
         status: 'failed',
         presetId: body.presetId || '',
         message: '请求参数不完整',
@@ -26,7 +27,7 @@ aiStyleRouter.post('/generate', async (req: express.Request, res: express.Respon
     if (body.sourceImage.size && body.sourceImage.size > 5242880) {
       return res.status(400).json({
         id: `error_${Date.now()}`,
-        provider: 'mock',
+        provider: 'unknown',
         status: 'failed',
         presetId: body.presetId,
         message: '图片过大',
@@ -41,7 +42,7 @@ aiStyleRouter.post('/generate', async (req: express.Request, res: express.Respon
     if (!allowedTypes.includes(body.sourceImage.type)) {
       return res.status(400).json({
         id: `error_${Date.now()}`,
-        provider: 'mock',
+        provider: 'unknown',
         status: 'failed',
         presetId: body.presetId,
         message: '图片格式不支持',
@@ -51,24 +52,37 @@ aiStyleRouter.post('/generate', async (req: express.Request, res: express.Respon
       } as RealAiStyleResult)
     }
 
-    // 当前版本：返回 mock 结果
-    // TODO: 后续接入真实 AI 服务商（腾讯混元、火山引擎等）
-    const result: RealAiStyleResult = {
-      id: `real_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      provider: process.env.AI_PROVIDER === 'real' ? 'tencent-hunyuan' : 'mock',
-      status: 'success',
-      presetId: body.presetId,
-      message: `[后端代理] AI 风格化 mock 已完成：${body.presetId}`,
-      creditCost: 1,
-      createdAt: new Date().toISOString(),
+    // 根据运行模式调用相应的 provider
+    const runtimeMode = process.env.AI_RUNTIME_MODE || 'mock'
+    const provider = process.env.AI_PROVIDER || 'mock'
+
+    console.log(`[AI Generate] Mode: ${runtimeMode}, Provider: ${provider}, Preset: ${body.presetId}`)
+
+    let result: RealAiStyleResult
+
+    if (runtimeMode === 'real' && provider === 'tencent-hunyuan') {
+      // 调用腾讯混元 provider
+      const tencentProvider = getTencentHunyuanProvider()
+      result = await tencentProvider.generate(body as RealAiStyleRequest)
+    } else {
+      // 默认返回 mock 结果
+      result = {
+        id: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        provider: 'mock',
+        status: 'success',
+        presetId: body.presetId,
+        message: `[Mock] AI 风格化已完成：${body.presetId}`,
+        creditCost: 1,
+        createdAt: new Date().toISOString(),
+      }
     }
 
     res.json(result)
   } catch (error) {
-    console.error('Generate Error:', error)
+    console.error('[AI Generate Error]', error)
     res.status(500).json({
       id: `error_${Date.now()}`,
-      provider: 'mock',
+      provider: 'unknown',
       status: 'failed',
       presetId: '',
       message: 'AI 处理失败',

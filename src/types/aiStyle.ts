@@ -25,6 +25,7 @@ export interface AiStyleSourceImage {
   width?: number
   height?: number
   previewUrl: string
+  base64?: string
   createdAt: string
 }
 

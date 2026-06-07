@@ -33,12 +33,16 @@ export function AiStyleImageUploader({
     const reader = new FileReader()
     reader.onload = e => {
       const result = e.target?.result as string
+      // 提取纯 base64（去掉 data:image/..;base64, 前缀）
+      const base64Data = result.split(',')[1] || result
+
       const image: AiStyleSourceImage = {
         id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: file.name,
         type: file.type,
         size: file.size,
         previewUrl: result,
+        base64: base64Data,
         createdAt: new Date().toISOString(),
       }
 

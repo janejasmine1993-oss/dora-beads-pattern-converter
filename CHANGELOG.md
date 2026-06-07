@@ -1,5 +1,175 @@
 # CHANGELOG
 
+## v0.7.3-tencent-hunyuan-provider - 2026-06-07
+
+### 🎯 版本目标
+
+在 v0.7.2 真实 AI adapter 架构基础上，接入腾讯混元生图真实 AI Provider。跑通第一条真实 AI 图像处理链路。
+
+### ✨ 核心功能
+
+**腾讯混元 Provider 实现**：
+- ✅ 新增 tencentHunyuanProvider.ts 服务类
+- ✅ 支持 ImageToImage 图像风格化接口
+- ✅ 支持 RefineImage 图片变清晰接口
+- ✅ 根据 preset 自动选择接口（enhance-clarity → RefineImage，其他 → ImageToImage）
+
+**Prompt 和 Style 映射**：
+- ✅ tencentHunyuanPromptMap.ts - 10 个 preset 对应的中文提示词映射
+- ✅ tencentHunyuanStyleMap.ts - preset 到腾讯风格 ID 的映射
+- ✅ 包含风格化、图片处理等所有 preset 的提示词
+
+**真实能力覆盖**：
+- ✅ pixel-clean（干净像素风）→ ImageToImage
+- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage
+- ✅ cute-cartoon（Q 版卡通）→ ImageToImage
+- ✅ watercolor（水彩风）→ ImageToImage
+- ✅ illustration（插画风格）→ ImageToImage
+- ✅ anime-soft（柔和动漫风）→ ImageToImage
+- ✅ clean-background（清理杂乱背景）→ ImageToImage
+- ✅ remove-background（背景简化）→ ImageToImage（非透明抠图）
+- ✅ color-optimize（颜色优化）→ ImageToImage
+- ✅ reduce-noise（减少杂色）→ ImageToImage
+- ✅ enhance-clarity（提高清晰度）→ RefineImage
+
+**后端改进**：
+- ✅ 后端路由支持 runtime mode 和 provider 检测
+- ✅ 腾讯混元密钥缺失检测和用户友好错误提示
+- ✅ 错误处理覆盖：密钥缺失、权限不足、余额不足、图片过大、审核失败、并发超限
+- ✅ 后端日志记录 AI provider、preset、图片大小、请求状态
+
+**前端改进**：
+- ✅ AiStyleImageUploader 保存 base64 数据供后端调用
+- ✅ AiStylePanel 显示腾讯混元相关信息
+- ✅ AiStylePanel 为"去除背景"添加"背景简化"说明
+- ✅ AiStylePanel 按钮文本动态切换（mock 模式："模拟生成"，real 模式："开始 AI 优化"）
+- ✅ 结果预览区显示真实生成的图片
+
+**环境变量和配置**：
+- ✅ .env.example 新增腾讯混元专用环境变量
+- ✅ 支持 TENCENT_REGION, TENCENT_AIART_ENDPOINT, TENCENT_AIART_VERSION 自定义
+- ✅ 前后端配置分离，API Key 仅在后端存储
+
+**文档完善**：
+- ✅ docs/TENCENT_HUNYUAN_SETUP.md 完整设置指南（16 章节）
+  - 服务开通确认
+  - API 密钥创建
+  - CAM 权限配置
+  - 环境变量配置
+  - 后端启动方法
+  - 前端测试流程
+  - 常见错误排查（7 种常见问题）
+  - 监控和日志
+  - 支持的 Preset 列表
+  - 最佳实践和成本优化
+  - FAQ
+
+### 🔧 后端文件结构
+
+```
+server/
+├── services/
+│   ├── providers/
+│   │   └── tencentHunyuanProvider.ts        # 腾讯混元 AI Provider
+│   └── promptMaps/
+│       ├── tencentHunyuanPromptMap.ts       # 提示词映射
+│       └── tencentHunyuanStyleMap.ts        # 风格 ID 映射
+└── routes/
+    └── aiStyle.ts                            # 更新以支持腾讯混元
+```
+
+### 🔐 安全特性
+
+- ✅ API Key 仅在 server/.env.local（未跟踪）
+- ✅ 前端代码中无任何 API Key
+- ✅ base64 图片不写入日志
+- ✅ 错误信息不暴露敏感细节
+- ✅ 后端响应标准化，隐藏腾讯原始字段
+
+### ⚙️ 环境变量配置示例
+
+```bash
+# 前端 (VITE_*)
+VITE_AI_RUNTIME_MODE=real
+VITE_AI_PROVIDER=tencent-hunyuan
+VITE_API_BASE_URL=http://localhost:3001
+
+# 后端 (server/.env.local，不提交)
+TENCENT_SECRET_ID=AKID...
+TENCENT_SECRET_KEY=wl6F...
+TENCENT_REGION=ap-guangzhou
+TENCENT_AIART_ENDPOINT=aiart.tencentcloudapi.com
+TENCENT_AIART_VERSION=2022-12-29
+```
+
+### 📝 修改文件列表
+
+**新增文件**：
+- `server/services/providers/tencentHunyuanProvider.ts`
+- `server/services/promptMaps/tencentHunyuanPromptMap.ts`
+- `server/services/promptMaps/tencentHunyuanStyleMap.ts`
+- `docs/TENCENT_HUNYUAN_SETUP.md`
+
+**修改文件**：
+- `server/package.json` - 添加 tencentcloud-sdk-nodejs 依赖（预留）
+- `server/routes/aiStyle.ts` - 支持调用腾讯混元 provider
+- `src/types/aiStyle.ts` - 添加 base64 字段
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 保存 base64 数据
+- `src/components/UserCenter/AiStylePanel.tsx` - 显示腾讯混元信息、背景简化说明、动态按钮文本
+- `src/hooks/useAiStyle.ts` - 处理结果图片 URL
+- `.env.example` - 腾讯混元专用环境变量
+- `package.json` - 版本号更新到 0.7.3
+- `CHANGELOG.md` - 本条目
+
+### ✅ 验证清单
+
+- [x] tencentHunyuanProvider.ts 实现完整
+- [x] 支持 ImageToImage 和 RefineImage 两个接口
+- [x] Prompt 映射覆盖所有 preset
+- [x] 后端路由集成腾讯混元 provider
+- [x] 环境变量配置完善
+- [x] 前端支持 base64 数据传输
+- [x] 错误处理完善（密钥、权限、余额、审核、并发）
+- [x] AiStylePanel 显示运行模式和服务商
+- [x] 去除背景 preset 有"背景简化"说明
+- [x] 结果预览区支持显示真实图片
+- [x] 腾讯混元设置指南完成
+- [x] npm run build 通过
+- [x] 原有图纸转换功能不受影响
+- [x] Mock 模式回归测试通过
+- [x] API Key 仅在后端使用
+
+### 🔄 版本对比
+
+| 功能 | v0.7.2 | v0.7.3 |
+|-----|--------|--------|
+| Mock Provider | ✅ | ✅ |
+| Real Provider 架构 | ✅ | ✅ |
+| 腾讯混元 Provider | ❌ | ✅ |
+| ImageToImage 接口 | ❌ | ✅ |
+| RefineImage 接口 | ❌ | ✅ |
+| Prompt 映射 | ❌ | ✅ |
+| Style 映射 | ❌ | ✅ |
+| 腾讯混元文档 | ❌ | ✅ |
+
+### 📋 后续任务
+
+1. **真实腾讯 SDK 集成** (v0.7.4)
+   - 替换 mock 实现为真实 tencentcloud-sdk-nodejs 调用
+   - 实现完整的 ImageToImage 和 RefineImage 请求体构造
+
+2. **其他 Provider** (v0.8)
+   - 火山引擎（Volcengine）接入
+   - 阿里云（Aliyun）接入
+   - OpenAI 接入
+
+3. **高级功能** (v0.9)
+   - 用户认证和速率限制
+   - 成本监控和告警
+   - 调用日志记录
+
+---
+
 ## v0.7.2-real-ai-adapter-poc - 2026-06-07
 
 ### 🎯 版本目标

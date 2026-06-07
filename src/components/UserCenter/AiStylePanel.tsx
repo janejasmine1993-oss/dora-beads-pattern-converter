@@ -56,11 +56,12 @@ export function AiStylePanel({
     try {
       await onProcessStyle(selectedPreset, selectedImage)
       const preset = presets.find(p => p.id === selectedPreset)
-      setLastMessage(`✅ AI ${preset?.category === 'process' ? '处理' : '风格化'} mock 已完成`)
+      setLastMessage(`✅ AI ${preset?.category === 'process' ? '处理' : '风格化'} 已完成`)
       setLastResult({
         presetId: selectedPreset,
         presetName: preset?.name,
         sourceImage: selectedImage,
+        resultImageUrl: undefined, // 将从外部注入
         timestamp: new Date().toLocaleTimeString('zh-CN'),
       })
       setTimeout(() => setLastMessage(''), 5000)
@@ -75,6 +76,13 @@ export function AiStylePanel({
     const totalCredits = (credits?.dailyRemaining || 0) + (credits?.extraCredits || 0)
     if (totalCredits < preset.creditCost) return '今日 AI 次数不足，可升级会员或使用兑换码'
     if (!selectedImage) return '请先上传图片'
+    return null
+  }
+
+  const getPresetNote = (presetId: string | null): string | null => {
+    if (presetId === 'remove-background' && aiRuntimeConfig.mode === 'real') {
+      return '说明：当前为背景简化处理，暂不是透明背景抠图。'
+    }
     return null
   }
 
@@ -212,6 +220,13 @@ export function AiStylePanel({
         </div>
       )}
 
+      {/* 预设说明 */}
+      {selectedPreset && getPresetNote(selectedPreset) && (
+        <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+          {getPresetNote(selectedPreset)}
+        </div>
+      )}
+
       {/* 生成按钮 */}
       <button
         onClick={handleProcess}
@@ -223,7 +238,7 @@ export function AiStylePanel({
             : 'bg-purple-500 text-white hover:bg-purple-600'
         }`}
       >
-        {isProcessing ? '处理中...' : '模拟生成'}
+        {isProcessing ? '处理中...' : aiRuntimeConfig.mode === 'real' ? '开始 AI 优化' : '模拟生成'}
       </button>
 
       {/* 结果预览区 */}
@@ -243,7 +258,19 @@ export function AiStylePanel({
               <span className="font-semibold">生成时间：</span>
               {lastResult.timestamp}
             </p>
-            <p className="mt-2 text-green-600">当前为 mock 模式，暂未接入真实 AI API</p>
+            {lastResult.resultImageUrl && aiRuntimeConfig.mode === 'real' && (
+              <div className="mt-2">
+                <p className="font-semibold mb-1">结果图预览：</p>
+                <img
+                  src={lastResult.resultImageUrl}
+                  alt="AI 优化结果"
+                  className="w-full h-auto max-h-64 rounded border border-green-200"
+                />
+              </div>
+            )}
+            {aiRuntimeConfig.mode === 'mock' && (
+              <p className="mt-2 text-green-600">当前为 mock 模式，未消耗实际 AI 配额</p>
+            )}
           </div>
         </div>
       )}

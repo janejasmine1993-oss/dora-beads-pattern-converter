@@ -55,6 +55,7 @@ export function useAiStyle(userId: string | undefined) {
           status: 'success',
           presetId: result.presetId,
           sourceImage,
+          previewImageUrl: result.resultImageUrl,
           message: result.message,
           creditCost: result.creditCost,
           createdAt: result.createdAt,
