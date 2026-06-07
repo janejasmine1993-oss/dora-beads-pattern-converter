@@ -1,43 +1,89 @@
 import { useState, useEffect } from 'react'
-import type { MembershipLevel } from '../services/mock/membershipMockService'
-import type { MembershipMock } from '../services/mock/membershipMockService'
-import { membershipMockService } from '../services/mock/membershipMockService'
+import { useAuth } from './useAuth'
+import { getMembership, devUpgradeMembership } from '../services/api/membershipApi'
 
-export function useMembership(userId: string | undefined) {
-  const [membership, setMembership] = useState<MembershipMock | null>(null)
-  const [daysUntilExpiry, setDaysUntilExpiry] = useState(0)
+interface Membership {
+  level: 'free' | 'monthly' | 'yearly' | 'lifetime'
+  status: string
+  startedAt: string
+  expiresAt: string | null
+  benefits: {
+    dailyAiCredits: number
+    maxWorks: number
+    canHdExport: boolean
+    canBatchManage: boolean
+  }
+}
 
+const LEVEL_NAMES = {
+  free: '免费用户',
+  monthly: '月会员',
+  yearly: '年会员',
+  lifetime: '永久会员',
+}
+
+export function useMembership() {
+  const { user, token } = useAuth()
+  const [membership, setMembership] = useState<Membership | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 从后端读取会员信息
   useEffect(() => {
-    if (!userId) {
+    if (!user || !token) {
       setMembership(null)
+      setError(null)
       return
     }
 
-    const m = membershipMockService.getMembership(userId)
-    setMembership(m)
-    setDaysUntilExpiry(membershipMockService.getDaysUntilExpiry(m))
-  }, [userId])
+    const fetchMembership = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getMembership(token)
+        setMembership(data)
+      } catch (err) {
+        console.error('Failed to fetch membership:', err)
+        setError(err instanceof Error ? err.message : '无法获取会员信息')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const upgradeMembership = (level: MembershipLevel) => {
-    if (!userId) return
-    const updated = membershipMockService.mockUpgradeMembership(userId, level)
-    setMembership(updated)
-    setDaysUntilExpiry(membershipMockService.getDaysUntilExpiry(updated))
+    fetchMembership()
+  }, [user, token])
+
+  const getDaysUntilExpiry = (m: Membership) => {
+    if (!m.expiresAt) return -1
+    const expiry = new Date(m.expiresAt)
+    const now = new Date()
+    const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.max(0, days)
   }
 
-  const getBenefits = (level: MembershipLevel) => {
-    return membershipMockService.getBenefits(level)
-  }
+  const upgradeMembership = async (level: 'free' | 'monthly' | 'yearly' | 'lifetime') => {
+    if (!token) return
 
-  const getAllLevels = (): MembershipLevel[] => {
-    return membershipMockService.getAllLevels()
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await devUpgradeMembership(token, level)
+      setMembership(data.membership)
+    } catch (err) {
+      console.error('Failed to upgrade membership:', err)
+      setError(err instanceof Error ? err.message : '升级失败')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return {
     membership,
-    daysUntilExpiry,
+    loading,
+    error,
+    daysUntilExpiry: membership ? getDaysUntilExpiry(membership) : 0,
     upgradeMembership,
-    getBenefits,
-    getAllLevels,
+    levelNames: LEVEL_NAMES,
+    allLevels: ['free', 'monthly', 'yearly', 'lifetime'] as const,
   }
 }

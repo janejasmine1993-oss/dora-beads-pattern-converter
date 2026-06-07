@@ -24,7 +24,7 @@ const stylePresetCategories = [
 
 export function AiOptimizePage({ onBack, onUseResultInWorkspace, onRequireLogin, currentWorkspaceImage }: AiOptimizePageProps) {
   const { user, isLoggedIn, isSubmitting, login, loginWithEmail } = useAuth()
-  const { credits } = useCredits(user?.id)
+  const { credits } = useCredits()
   const { presets, isProcessing, error: styleError, processStyle } = useAiStyle(user?.id)
 
   const [selectedImage, setSelectedImage] = useState<AiStyleSourceImage | null>(null)

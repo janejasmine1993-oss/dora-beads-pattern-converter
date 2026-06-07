@@ -20,8 +20,8 @@ interface UserCenterProps {
 export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) {
   const [activeTab, setActiveTab] = useState<Tab>('status')
   const { user, isLoggedIn, isSubmitting, login, loginWithEmail, register, logout } = useAuth()
-  const { membership, daysUntilExpiry, upgradeMembership, getBenefits, getAllLevels } = useMembership(user?.id)
-  const { credits } = useCredits(user?.id)
+  const { membership, daysUntilExpiry, upgradeMembership, loading: membershipLoading, error: membershipError } = useMembership()
+  const { credits, resetCredits, loading: creditsLoading, error: creditsError } = useCredits()
   const { availableCodes, redeemHistory, isProcessing: isProcessingRedeem, redeem } = useRedeemCode(user?.id)
   const { works, saveWork, deleteWork, renameWork } = useWorks(user?.id)
 
@@ -110,13 +110,59 @@ export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) 
           )}
 
           {activeTab === 'membership' && (
-            <MembershipCard
-              membership={membership || null}
-              daysUntilExpiry={daysUntilExpiry}
-              allLevels={getAllLevels()}
-              getBenefits={getBenefits}
-              onUpgrade={upgradeMembership}
-            />
+            <>
+              <MembershipCard
+                membership={membership}
+                daysUntilExpiry={daysUntilExpiry}
+                loading={membershipLoading}
+                error={membershipError}
+                onUpgrade={upgradeMembership}
+              />
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">AI 次数（服务端数据）</h3>
+
+                {creditsError ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+                    ❌ {creditsError}
+                  </div>
+                ) : credits ? (
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-600">
+                      <span className="font-semibold">每日配额：</span>
+                      {credits.dailyTotal} 次
+                    </p>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">已用：</span>
+                      {credits.dailyUsed} / {credits.dailyTotal}
+                    </p>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">剩余：</span>
+                      <span className="text-blue-600 font-semibold">{credits.dailyRemaining}</span>
+                    </p>
+                    {credits.extraCredits > 0 && (
+                      <p className="text-gray-600">
+                        <span className="font-semibold">额外次数：</span>
+                        {credits.extraCredits}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 pt-2 border-t border-gray-200 mt-2">
+                      重置时间：{new Date(credits.resetAt).toLocaleString('zh-CN')}
+                    </p>
+
+                    <button
+                      onClick={() => resetCredits()}
+                      disabled={creditsLoading}
+                      className="mt-3 w-full px-3 py-2 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      {creditsLoading ? '处理中...' : '🧪 开发测试：重置今日次数'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">请先登录查看 AI 次数</p>
+                )}
+              </div>
+            </>
           )}
 
           {activeTab === 'works' && (
@@ -137,16 +183,6 @@ export function UserCenter({ isOpen, onClose, onAuthSuccess }: UserCenterProps) 
               isProcessing={isProcessingRedeem}
               onRedeem={redeem}
             />
-          )}
-
-          {/* 次数显示 */}
-          {credits && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-              <p className="text-blue-900">
-                <span className="font-semibold">AI 次数：</span>
-                {credits.dailyRemaining + credits.extraCredits} 次可用
-              </p>
-            </div>
           )}
         </div>
 

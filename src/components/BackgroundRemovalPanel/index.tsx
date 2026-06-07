@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import { aiRuntimeConfig } from '../../services/ai/aiRuntimeConfig'
+import { useAuth } from '../../hooks/useAuth'
+import { useCredits } from '../../hooks/useCredits'
 
 interface BackgroundRemovalPanelProps {
   onApply: (processedUrl: string) => void
@@ -36,6 +38,8 @@ const STYLE_TRANSFER_PRESETS = [
 
 export function BackgroundRemovalPanel({ onApply, currentWorkspaceImage, isLoading }: BackgroundRemovalPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { isLoggedIn } = useAuth()
+  const { credits, consumeCredit, refresh } = useCredits()
   const [uploadedImage, setUploadedImage] = useState<{ url: string; name: string; base64: string } | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<string>('bead-pattern')
   const [result, setResult] = useState<OptimizeResult>({ id: '', status: 'idle', presetId: '', message: '', createdAt: new Date().toISOString() })
@@ -68,6 +72,18 @@ export function BackgroundRemovalPanel({ onApply, currentWorkspaceImage, isLoadi
       return
     }
 
+    // 检查是否登录
+    if (!isLoggedIn) {
+      alert('请先登录后使用 AI 优化功能')
+      return
+    }
+
+    // 检查 AI 次数
+    if (!credits || credits.dailyRemaining + credits.extraCredits < 1) {
+      alert('AI 次数不足，请升级会员或稍后再试')
+      return
+    }
+
     setResult({ id: `ai_${Date.now()}`, status: 'processing', presetId: selectedPreset, message: '优化中...', createdAt: new Date().toISOString() })
 
     try {
@@ -75,6 +91,23 @@ export function BackgroundRemovalPanel({ onApply, currentWorkspaceImage, isLoadi
 
       // Mock 模式：直接使用上传图或工作台图作为结果
       const sourceImage = uploadedImage?.url || currentWorkspaceImage?.url || ''
+
+      // AI 优化成功后，消费一次 AI 次数
+      const consumeResult = await consumeCredit(1, 'ai_optimize')
+      if (!consumeResult.success) {
+        setResult({
+          id: `ai_error_${Date.now()}`,
+          status: 'failed',
+          presetId: selectedPreset,
+          message: '优化失败',
+          errorMessage: consumeResult.message,
+          createdAt: new Date().toISOString(),
+        })
+        return
+      }
+
+      // 刷新 credits 显示
+      await refresh()
 
       setResult({
         id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
