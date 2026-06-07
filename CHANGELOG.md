@@ -4,14 +4,16 @@
 
 ### 🎯 版本目标
 
-在 v0.7.2 真实 AI adapter 架构基础上，接入腾讯混元生图真实 AI Provider。跑通第一条真实 AI 图像处理链路。
+在 v0.7.2 真实 AI adapter 架构基础上，完成腾讯混元 AI Provider 的框架和配置准备。为真实 SDK 接入（v0.7.4）奠定基础。
+
+**⚠️ 重要说明**：当前版本为 Provider 框架和占位实现，还**没有真正调用腾讯云 SDK**。真实 SDK 集成将在 v0.7.4 完成。
 
 ### ✨ 核心功能
 
-**腾讯混元 Provider 实现**：
-- ✅ 新增 tencentHunyuanProvider.ts 服务类
-- ✅ 支持 ImageToImage 图像风格化接口
-- ✅ 支持 RefineImage 图片变清晰接口
+**腾讯混元 Provider 框架**：
+- ✅ 新增 tencentHunyuanProvider.ts 服务类（框架完整，SDK 待实现）
+- ✅ 支持 ImageToImage 接口框架（需在 v0.7.4 实现真实调用）
+- ✅ 支持 RefineImage 接口框架（需在 v0.7.4 实现真实调用）
 - ✅ 根据 preset 自动选择接口（enhance-clarity → RefineImage，其他 → ImageToImage）
 
 **Prompt 和 Style 映射**：
@@ -19,18 +21,18 @@
 - ✅ tencentHunyuanStyleMap.ts - preset 到腾讯风格 ID 的映射
 - ✅ 包含风格化、图片处理等所有 preset 的提示词
 
-**真实能力覆盖**：
-- ✅ pixel-clean（干净像素风）→ ImageToImage
-- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage
-- ✅ cute-cartoon（Q 版卡通）→ ImageToImage
-- ✅ watercolor（水彩风）→ ImageToImage
-- ✅ illustration（插画风格）→ ImageToImage
-- ✅ anime-soft（柔和动漫风）→ ImageToImage
-- ✅ clean-background（清理杂乱背景）→ ImageToImage
-- ✅ remove-background（背景简化）→ ImageToImage（非透明抠图）
-- ✅ color-optimize（颜色优化）→ ImageToImage
-- ✅ reduce-noise（减少杂色）→ ImageToImage
-- ✅ enhance-clarity（提高清晰度）→ RefineImage
+**Preset 接口映射**（框架）：
+- ✅ pixel-clean（干净像素风）→ ImageToImage 框架
+- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage 框架
+- ✅ cute-cartoon（Q 版卡通）→ ImageToImage 框架
+- ✅ watercolor（水彩风）→ ImageToImage 框架
+- ✅ illustration（插画风格）→ ImageToImage 框架
+- ✅ anime-soft（柔和动漫风）→ ImageToImage 框架
+- ✅ clean-background（清理杂乱背景）→ ImageToImage 框架
+- ✅ remove-background（背景简化）→ ImageToImage 框架（非透明抠图）
+- ✅ color-optimize（颜色优化）→ ImageToImage 框架
+- ✅ reduce-noise（减少杂色）→ ImageToImage 框架
+- ✅ enhance-clarity（提高清晰度）→ RefineImage 框架
 
 **后端改进**：
 - ✅ 后端路由支持 runtime mode 和 provider 检测
@@ -39,11 +41,11 @@
 - ✅ 后端日志记录 AI provider、preset、图片大小、请求状态
 
 **前端改进**：
-- ✅ AiStyleImageUploader 保存 base64 数据供后端调用
+- ✅ AiStyleImageUploader 保存 base64 数据供后端调用（准备用于 v0.7.4 真实 API 调用）
 - ✅ AiStylePanel 显示腾讯混元相关信息
 - ✅ AiStylePanel 为"去除背景"添加"背景简化"说明
 - ✅ AiStylePanel 按钮文本动态切换（mock 模式："模拟生成"，real 模式："开始 AI 优化"）
-- ✅ 结果预览区显示真实生成的图片
+- ✅ 结果预览区支持显示图片（当前为 mock URL）
 
 **环境变量和配置**：
 - ✅ .env.example 新增腾讯混元专用环境变量
@@ -152,11 +154,15 @@ TENCENT_AIART_VERSION=2022-12-29
 | Style 映射 | ❌ | ✅ |
 | 腾讯混元文档 | ❌ | ✅ |
 
-### 📋 后续任务
+### 📋 后续任务（关键：当前 v0.7.3 还不能真实调用）
 
-1. **真实腾讯 SDK 集成** (v0.7.4)
-   - 替换 mock 实现为真实 tencentcloud-sdk-nodejs 调用
-   - 实现完整的 ImageToImage 和 RefineImage 请求体构造
+1. **真实腾讯 SDK 集成** (v0.7.4) - 必做
+   - ⚠️ 当前 callTencentImageToImage() 和 callTencentRefineImage() 是 TODO 占位
+   - 需要导入 tencentcloud-sdk-nodejs
+   - 实现完整的 ImageToImage API 调用
+   - 实现完整的 RefineImage API 调用
+   - 处理 base64 编码和 Strength 转换
+   - 验证返回结果的 resultImageUrl
 
 2. **其他 Provider** (v0.8)
    - 火山引擎（Volcengine）接入

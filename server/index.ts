@@ -11,7 +11,32 @@ app.use(express.json({ limit: '10mb' }))
 
 // 健康检查
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({
+    ok: true,
+    service: 'dora-beads-ai-server',
+    version: '0.7.3',
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// AI 健康检查（带 provider 信息）
+app.get('/api/health', (req, res) => {
+  const runtimeMode = process.env.AI_RUNTIME_MODE || 'mock'
+  const provider = process.env.AI_PROVIDER || 'mock'
+  const hasKeys = !!(process.env.TENCENT_SECRET_ID && process.env.TENCENT_SECRET_KEY)
+
+  res.json({
+    ok: true,
+    service: 'dora-beads-ai-server',
+    version: '0.7.3',
+    ai: {
+      runtimeMode,
+      provider,
+      tencentKeysConfigured: hasKeys,
+      status: runtimeMode === 'real' && provider === 'tencent-hunyuan' ? (hasKeys ? 'ready' : 'missing-keys') : 'mock-mode',
+    },
+    timestamp: new Date().toISOString(),
+  })
 })
 
 // AI 风格化路由
