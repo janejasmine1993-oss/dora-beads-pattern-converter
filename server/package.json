@@ -1,6 +1,6 @@
 {
   "name": "dora-beads-server",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "type": "module",
   "description": "Backend proxy for AI style API",
   "main": "dist/index.js",
@@ -11,8 +11,9 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
-    "tencentcloud-sdk-nodejs": "^5.1.3"
+    "tencentcloud-sdk-nodejs": "^4.1.244"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

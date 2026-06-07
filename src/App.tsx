@@ -18,11 +18,12 @@ import { AppHeader } from './components/AppHeader'
 import { HomePage } from './components/HomePage'
 import { ComingSoonModal } from './components/ComingSoonModal'
 import { UserCenter } from './components/UserCenter'
+import { AiOptimizePage } from './components/AiOptimizePage'
 import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 
 type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
-type AppPage = 'home' | 'workspace'
+type AppPage = 'home' | 'workspace' | 'ai-optimize'
 type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | null
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
@@ -477,6 +478,17 @@ function App() {
     setCurrentPage('workspace')
   }
 
+  function handleSelectAiOptimize() {
+    setCurrentPage('ai-optimize')
+  }
+
+  function handleUseAiResultInWorkspace(resultImageUrl: string) {
+    setImageUrl(resultImageUrl)
+    setWorkTitle('AI优化图片')
+    setImportMode('photo-direct')
+    setCurrentPage('workspace')
+  }
+
   // Home page view
   if (currentPage === 'home') {
     return (
@@ -489,6 +501,7 @@ function App() {
         <HomePage
           onStartCreating={handleStartCreating}
           onSelectMode={handleSelectMode}
+          onSelectAiOptimize={handleSelectAiOptimize}
         />
         {comingSoonFeature && (
           <ComingSoonModal
@@ -497,6 +510,24 @@ function App() {
             onClose={() => setComingSoonFeature(null)}
           />
         )}
+      </>
+    )
+  }
+
+  // AI Optimize page view
+  if (currentPage === 'ai-optimize') {
+    return (
+      <>
+        <AppHeader
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onFeatureClick={handleFeatureClick}
+        />
+        <AiOptimizePage
+          onBack={() => setCurrentPage('home')}
+          onUseResultInWorkspace={handleUseAiResultInWorkspace}
+          currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
+        />
       </>
     )
   }

@@ -1,13 +1,13 @@
 import { useState } from 'react'
 
 interface AppHeaderProps {
-  currentPage: 'home' | 'workspace'
-  onNavigate: (page: 'home' | 'workspace') => void
+  currentPage: 'home' | 'workspace' | 'ai-optimize'
+  onNavigate: (page: 'home' | 'workspace' | 'ai-optimize') => void
   onFeatureClick: (feature: 'works' | 'membership' | 'redeem' | 'help' | 'login') => void
 }
 
 type HeaderNavItem =
-  | { id: string; label: string; page: 'home' | 'workspace' }
+  | { id: string; label: string; page: 'home' | 'workspace' | 'ai-optimize' }
   | { id: string; label: string; feature: 'works' | 'membership' | 'help' }
 
 export function AppHeader({
@@ -20,6 +20,7 @@ export function AppHeader({
   const navItems: HeaderNavItem[] = [
     { id: 'home', label: '首页', page: 'home' as const },
     { id: 'workspace', label: '工作台', page: 'workspace' as const },
+    { id: 'ai-optimize', label: 'AI 优化', page: 'ai-optimize' as const },
     { id: 'works', label: '我的作品', feature: 'works' as const },
     { id: 'membership', label: '会员', feature: 'membership' as const },
     { id: 'help', label: '帮助', feature: 'help' as const },

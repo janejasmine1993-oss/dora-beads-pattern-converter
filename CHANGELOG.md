@@ -1,5 +1,58 @@
 # CHANGELOG
 
+## v0.7.5 - ai-optimization-workflow-redesign - 2026-06-07
+
+### ✨ 核心改进
+
+**将 AI 优化功能从用户中心独立出来**：
+- ✅ 新增独立的 AI 优化图片页面（src/components/AiOptimizePage/index.tsx）
+- ✅ AppHeader 新增 "AI 优化" 导航项
+- ✅ 首页 "AI 优化后转图纸" 卡片直接进入独立 AI 优化页面
+- ✅ 用户中心移除 AI 风格化 Tab，仅保留状态、会员、我的作品、兑换码
+
+**统一运行模式显示**：
+- ✅ 修复 Real/Mock 模式文案冲突（之前标题显示 Real，次数区域显示"当前为 mock 模式"）
+- ✅ AI 优化页面顶部统一显示运行模式（Real 真实 AI / Mock 模拟）
+- ✅ 消除所有页面的模式显示冲突
+
+**完整 AI 优化工作流**：
+- ✅ AI 优化页面支持上传图片或使用工作台图片
+- ✅ 支持选择优化方式（图片处理/风格转换 两个分组）
+- ✅ 支持调整优化强度和保留原色参数
+- ✅ AI 优化完成后显示结果图预览
+- ✅ 支持 "用此图生成拼豆图纸" 按钮直接导入工作台
+- ✅ 支持 "下载优化图" 和 "继续优化" 操作
+
+**登录门控**：
+- ✅ 未登录点击 "开始 AI 优化" 时在页面内显示登录提示
+- ✅ 点击 "去登录" 调用 login 函数，点击 "取消" 关闭提示
+- ✅ 不会强行跳转离开 AI 优化页面
+
+**用户中心优化**：
+- ✅ 用户中心始终显示 AI 次数概览
+- ✅ AI 优化页面顶部也显示今日剩余 AI 次数
+- ✅ 用户中心专注账号、会员、作品、兑换码管理
+
+### 文件改动
+
+**新增**：
+- `src/components/AiOptimizePage/index.tsx` — AI 优化独立页面
+
+**修改**：
+- `src/App.tsx` — 新增 'ai-optimize' page type，新增两个 handler，新增 AI 优化页面 render 分支
+- `src/components/AppHeader/index.tsx` — 添加 'AI 优化' 导航项
+- `src/components/HomePage/index.tsx` — 更新 'ai-enhanced' 卡片指向 AI 优化页面，更新卡片文案
+- `src/components/UserCenter/index.tsx` — 移除 'ai-style' Tab 和相关 hooks 调用，始终显示 AI 次数，更新版本号
+
+### 向后兼容
+
+- ✅ AiStylePanel.tsx 保留但未在 UserCenter 展示
+- ✅ Mock 模式保留，仍可用于测试
+- ✅ 所有图纸生成功能保持不变
+- ✅ 原有的直接上传转图纸功能不受影响
+
+---
+
 ## v0.7.4-tencent-hunyuan-real-sdk - 2026-06-07
 
 ### 🎯 版本目标

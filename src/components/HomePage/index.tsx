@@ -3,6 +3,7 @@ type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-patt
 interface HomePageProps {
   onStartCreating: () => void
   onSelectMode: (mode: ImportMode) => void
+  onSelectAiOptimize: () => void
 }
 
 interface FeatureCard {
@@ -29,9 +30,9 @@ const featureCards: FeatureCard[] = [
   },
   {
     id: 'ai-enhanced',
-    title: 'AI 优化后转图纸',
+    title: 'AI 优化图片',
     label: '推荐',
-    description: '先用 AI 去背景或风格化处理图片，再转成图纸，主体更清晰，颜色更准确。',
+    description: '先用 AI 清理图片、提高清晰度、简化色块，再生成更干净的拼豆图纸。',
     image: `${HOME_ASSET_PATH}/feature-card-ai.png`,
     arrowClass: 'from-[#ff9f25] to-[#ffbd4a]',
     labelBgColor: 'bg-[#ff9f25]',
@@ -130,7 +131,7 @@ function HomeHero({ onStartCreating }: { onStartCreating: () => void }) {
   )
 }
 
-function HomeFeatureCards({ onSelectMode }: { onSelectMode: (mode: ImportMode) => void }) {
+function HomeFeatureCards({ onSelectMode, onSelectAiOptimize }: { onSelectMode: (mode: ImportMode) => void; onSelectAiOptimize: () => void }) {
   return (
     <section id="home-features" className="px-6 py-6 sm:px-8">
       <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -138,7 +139,7 @@ function HomeFeatureCards({ onSelectMode }: { onSelectMode: (mode: ImportMode) =
           <button
             key={card.id}
             type="button"
-            onClick={() => onSelectMode(card.id)}
+            onClick={() => card.id === 'ai-enhanced' ? onSelectAiOptimize() : onSelectMode(card.id)}
             className="group relative aspect-[1.08/1] overflow-hidden rounded-[24px] border border-white/90 bg-white text-left shadow-[0_14px_34px_rgba(100,86,111,0.11)] transition hover:-translate-y-1 hover:shadow-[0_20px_44px_rgba(100,86,111,0.16)]"
           >
             <img
@@ -204,11 +205,11 @@ function HomeSloganStrip() {
   )
 }
 
-export function HomePage({ onStartCreating, onSelectMode }: HomePageProps) {
+export function HomePage({ onStartCreating, onSelectMode, onSelectAiOptimize }: HomePageProps) {
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fff8f7_0%,#fffefe_42%,#fff7fb_100%)]">
       <HomeHero onStartCreating={onStartCreating} />
-      <HomeFeatureCards onSelectMode={onSelectMode} />
+      <HomeFeatureCards onSelectMode={onSelectMode} onSelectAiOptimize={onSelectAiOptimize} />
       <HomeSloganStrip />
     </main>
   )

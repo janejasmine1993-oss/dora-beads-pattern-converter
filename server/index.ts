@@ -1,3 +1,5 @@
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })  // 加载 .env.local 文件
 import express from 'express'
 import cors from 'cors'
 import { aiStyleRouter } from './routes/aiStyle'
