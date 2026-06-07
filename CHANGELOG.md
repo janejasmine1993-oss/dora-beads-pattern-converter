@@ -1,5 +1,153 @@
 # CHANGELOG
 
+## v0.7.0-ai-style-mock - 2026-06-07
+
+### 🎯 版本目标
+
+本版本为后续商业化功能搭建"骨架"和"接口层"，不接入真实服务（支付、微信、AI API、数据库）。
+
+### ✨ 新增功能
+
+**Mock 服务层**：
+- ✅ 登录 mock 服务 - 支持模拟登录/退出
+- ✅ 会员系统 mock - 支持 free/monthly/yearly/lifetime 四个等级
+- ✅ AI 次数 mock - 支持每日次数限制、额外赠送、重置
+- ✅ AI 风格化 mock 服务 - 8 个预设风格，支持会员权限校验
+- ✅ 兑换码 mock - 3 个测试兑换码，防止重复使用
+- ✅ 我的作品 mock - 支持保存/删除/重命名作品元数据
+- ✅ 小程序入口占位
+
+**用户中心 UI**：
+- ✅ 综合用户中心面板（5 个 Tab）
+- ✅ 用户状态展示与模拟登录
+- ✅ 会员等级切换模拟
+- ✅ AI 次数消耗与重置
+- ✅ 兑换码输入与验证
+- ✅ 作品列表管理
+- ✅ AI 风格化预设展示与测试
+
+**架构设计**：
+- ✅ 分层设计：services/mock/ + hooks + components
+- ✅ localStorage 数据持久化
+- ✅ 清晰的接口层，便于后续接入真实腾讯云 API
+- ✅ 浮动按钮入口（工作台右下角）
+
+### 📊 localStorage 使用的 key
+
+```
+dora_auth_user
+dora_membership_<userId>
+dora_ai_credits_<userId>
+dora_ai_style_history_<userId>
+dora_user_works_<userId>
+dora_redeem_history_<userId>
+```
+
+### 🔍 核心逻辑
+
+**登录流程**：
+- 游客状态 → 模拟登录 → 已登录状态
+- 支持退出登录恢复游客状态
+
+**会员系统**：
+- Free: 3 次/日，3 个作品
+- Monthly: 50 次/日，100 个作品，高清导出
+- Yearly: 200 次/日，1000 个作品，批量导出
+- Lifetime: 无限次数，无限作品，全功能
+
+**AI 风格化**：
+- 8 个预设风格（2 个免费，6 个会员）
+- 点击预设 → 检查权限 → 检查次数 → 消耗次数 → 返回 mock 结果
+- 支持 500-1000ms 处理延迟（模拟网络）
+
+**兑换码**：
+- DORA-VIP-30：30 天月会员
+- DORA-AI-100：100 次额外次数
+- DORA-TEST-999：永久会员
+- 防重复使用，历史记录保存
+
+**我的作品**：
+- 保存作品元数据（名称、尺寸、品牌、颜色数、豆数）
+- 删除、重命名、查看详情
+- 注：暂不保存完整图纸数据
+
+### ✅ 不破坏的现有功能
+
+- ✅ 首页与功能卡
+- ✅ 图片上传与转换
+- ✅ 图纸编辑（画笔、擦除、填充、吸色）
+- ✅ 颜色高亮 / 替换 / 删除
+- ✅ 图纸导出（带水印）
+- ✅ 预览与统计
+- ✅ 当前工作台布局与主题色
+
+### 🏗️ 代码结构
+
+```
+src/
+  services/mock/
+    authMockService.ts          ← 登录 mock
+    membershipMockService.ts    ← 会员 mock
+    creditsMockService.ts       ← AI 次数 mock
+    aiStyleMockService.ts       ← AI 风格化 mock
+    worksMockService.ts         ← 作品管理 mock
+    redeemCodeMockService.ts    ← 兑换码 mock
+  
+  types/
+    aiStyle.ts                  ← AI 风格化类型定义
+    work.ts                     ← 作品类型定义
+  
+  hooks/
+    useAuth.ts
+    useMembership.ts
+    useCredits.ts
+    useAiStyle.ts
+    useRedeemCode.ts
+    useWorks.ts
+  
+  components/UserCenter/
+    index.tsx                   ← 主面板（5 个 Tab）
+    UserStatusCard.tsx
+    MembershipCard.tsx
+    CreditsCard.tsx
+    AiStylePanel.tsx
+    RedeemCodePanel.tsx
+    MyWorksPanel.tsx
+```
+
+### 🧪 测试兑换码
+
+在用户中心的"兑换码"Tab 中测试：
+
+```
+DORA-VIP-30    → 升级月会员
+DORA-AI-100    → 获得 100 次额外 AI
+DORA-TEST-999  → 升级为永久会员
+```
+
+### 📝 后续接入建议
+
+**v0.8.0**：
+- 替换 mock services 为真实腾讯云 API
+- 集成真实用户认证（微信小程序登录）
+- 集成真实数据库存储
+
+**无需改动**：
+- 所有 hooks 保持不变
+- 所有 UI 组件无需改动
+- 应用状态管理无需改动
+
+只需替换 src/services/mock/ 目录下的服务实现即可。
+
+### ✨ 特别说明
+
+- 所有 mock 数据已明确标注"当前为 mock 模式"
+- 所有 mock 服务都有返回类型定义，便于日后替换
+- localStorage 数据可通过浏览器开发工具查看
+- 刷新页面后数据仍保留（localStorage 持久化）
+
+---
+
 ## v0.6.4-local-stable - 2026-06-07
 
 ### 发布状态

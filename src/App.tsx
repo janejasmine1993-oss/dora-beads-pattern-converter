@@ -17,6 +17,7 @@ import { ExistingPatternImportPanel } from './components/ExistingPatternImportPa
 import { AppHeader } from './components/AppHeader'
 import { HomePage } from './components/HomePage'
 import { ComingSoonModal } from './components/ComingSoonModal'
+import { UserCenter } from './components/UserCenter'
 import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 
@@ -46,6 +47,7 @@ function App() {
   // ── App page routing ─────────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState<AppPage>('home')
   const [comingSoonFeature, setComingSoonFeature] = useState<ComingSoonFeature>(null)
+  const [isUserCenterOpen, setIsUserCenterOpen] = useState(false)
 
   // ── Import mode ──────────────────────────────────────────────────────────────
   const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
@@ -838,6 +840,20 @@ function App() {
           feature={comingSoonFeature}
           onClose={() => setComingSoonFeature(null)}
         />
+      )}
+
+      {/* User Center Modal */}
+      <UserCenter isOpen={isUserCenterOpen} onClose={() => setIsUserCenterOpen(false)} />
+
+      {/* User Center Button (Floating) */}
+      {currentPage === 'workspace' && (
+        <button
+          onClick={() => setIsUserCenterOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition flex items-center justify-center z-40 hover:scale-110"
+          title="打开用户中心"
+        >
+          <span className="text-2xl">👤</span>
+        </button>
       )}
     </div>
   )
