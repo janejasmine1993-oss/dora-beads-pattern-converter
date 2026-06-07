@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { modeThemes } from './config/modeThemes'
 import { UploadPanel } from './components/UploadPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ColorControlPanel } from './components/ColorControlPanel'
@@ -497,8 +498,9 @@ function App() {
   }
 
   // Workspace view
+  const currentTheme = modeThemes[importMode]
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className={`flex flex-col h-screen bg-gradient-to-br ${currentTheme.bgGradient}`}>
       {/* App Header */}
       <AppHeader
         currentPage={currentPage}
@@ -518,6 +520,14 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left sidebar ─────────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
+          {/* Current Mode Badge */}
+          <div className="mb-6 pb-4 border-b border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">当前模式</p>
+            <div className={`inline-flex h-8 items-center justify-center rounded-full px-3 text-sm font-bold text-white ${currentTheme.badgeBg}`}>
+              {currentTheme.name}
+            </div>
+          </div>
+
           {/* Import Mode Selection */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">导入模式</p>
@@ -527,19 +537,23 @@ function App() {
                 { id: 'ai-enhanced' as const, label: '🤖 AI 增强' },
                 { id: 'pixel-grid' as const, label: '🔲 像素识别' },
                 { id: 'existing-pattern' as const, label: '📋 既有图纸' },
-              ] as Array<{ id: ImportMode; label: string }>).map(mode => (
-                <button
-                  key={mode.id}
-                  onClick={() => setImportMode(mode.id)}
-                  className={`w-full text-left px-3 py-2 text-xs rounded border transition-colors ${
-                    importMode === mode.id
-                      ? 'bg-blue-50 border-blue-400 text-blue-700 font-medium'
-                      : 'border-gray-300 text-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
+              ] as Array<{ id: ImportMode; label: string }>).map(mode => {
+                const modeTheme = modeThemes[mode.id]
+                const isSelected = importMode === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setImportMode(mode.id)}
+                    className={`w-full text-left px-3 py-2 text-xs rounded border transition-colors ${
+                      isSelected
+                        ? `bg-opacity-10 border-opacity-50 font-medium ${modeTheme.badgeBg} ${modeTheme.borderColor}`
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -556,7 +570,10 @@ function App() {
               <div className="grid grid-cols-3 gap-1 mb-1">
                 {([['rotate-ccw', '↺ 左转'], ['rotate-180', '⟳ 180°'], ['rotate-cw', '↻ 右转']] as [ImageTransformOp, string][]).map(([op, label]) => (
                   <button key={op} onClick={() => handleTransformImage(op)}
-                    className="text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                    className="text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                    style={{ borderColor: 'inherit' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                     {label}
                   </button>
                 ))}
@@ -564,14 +581,20 @@ function App() {
               <div className="grid grid-cols-2 gap-1 mb-1">
                 {([['flip-h', '↔ 水平翻转'], ['flip-v', '↕ 垂直翻转']] as [ImageTransformOp, string][]).map(([op, label]) => (
                   <button key={op} onClick={() => handleTransformImage(op)}
-                    className="text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                    className="text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                    style={{ borderColor: 'inherit' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                     {label}
                   </button>
                 ))}
               </div>
               <button
                 onClick={() => setShowCropModal(true)}
-                className="w-full text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                className="w-full text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                style={{ borderColor: 'inherit' }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                 ✂ 重新裁剪
               </button>
             </div>

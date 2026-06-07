@@ -181,8 +181,8 @@ function HomeSloganStrip() {
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div className="relative z-10 flex min-h-[104px] flex-col items-center justify-center gap-5 px-8 py-6 lg:flex-row lg:justify-end lg:gap-16 lg:pl-[260px] lg:pr-14">
-            <h2 className="text-center text-[22px] font-black leading-tight text-[#ff2f70] sm:text-[26px]">
-              让每一颗拼豆，都更有创意与温度
+            <h2 className="text-center text-[20px] font-black leading-tight text-[#ff2f70] sm:text-[24px]">
+              以拼豆为笔，让每颗像素都藏着创意与温度
             </h2>
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-bold text-[#536c87] sm:text-base">
               {sellingPoints.map((point, index) => (

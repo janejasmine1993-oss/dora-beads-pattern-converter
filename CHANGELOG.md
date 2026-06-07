@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## v0.6.2-workspace-mode-themes - 2026-06-07
+
+### Added
+
+- **工作台模式主题色联动**：首页四个功能卡进入工作台后，工作台外围背景会根据入口模式切换为对应主题色
+  - 新增统一模式主题配置文件：`src/config/modeThemes.ts`
+  - 四个模式分别对应柔和的背景梯度：粉色、橙色、绿色、紫色
+- **工作台侧边栏改进**：
+  - 顶部显示当前模式提示胶囊（模式名 + 主题色）
+  - 导入模式选择按钮根据当前模式使用对应主题色
+  - 预处理按钮 hover 状态使用当前模式主题色
+
+### Changed
+
+- **首页底部 slogan 文案更新**：
+  - 原文案：「让每一颗拼豆，都更有创意与温度」
+  - 新文案：「以拼豆为笔，让每颗像素都藏着创意与温度」
+  - 字号调整以适应新文案长度
+
+### Files Changed
+
+- `src/config/modeThemes.ts` - 新增统一模式主题配置
+- `src/App.tsx` - 工作台主题色联动实现
+- `src/components/HomePage/index.tsx` - 首页 slogan 文案修改
+
+### Notes
+
+- 工作台核心操作区保持白底清晰设计，仅外围背景应用梯度色
+- 不影响上传、转图纸、编辑、导出等核心功能
+- 未接入腾讯云混元、CloudBase、COS
+- 未修改登录、会员、兑换码相关逻辑
+- TypeScript 构建通过，lint 存在预存错误（工作台编辑器旧代码，非本次修改引入）
+
+### Mode Theme Mapping
+
+- `photo-direct`：粉色主题（图片直转图纸）
+- `ai-enhanced`：橙色主题（AI 优化后转图纸）
+- `pixel-grid`：绿色主题（像素图转色号）
+- `existing-pattern`：紫色主题（现有图纸再编辑）
+
+---
+
 ## v0.6.1-home-feature-cards-clean - 2026-06-07
 
 ### Changed
