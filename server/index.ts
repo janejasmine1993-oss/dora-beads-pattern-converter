@@ -1,0 +1,43 @@
+import express from 'express'
+import cors from 'cors'
+import { aiStyleRouter } from './routes/aiStyle'
+
+const app = express()
+const PORT = process.env.PORT || 3001
+
+// 中间件
+app.use(cors())
+app.use(express.json({ limit: '10mb' }))
+
+// 健康检查
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// AI 风格化路由
+app.use('/api/ai-style', aiStyleRouter)
+
+// 错误处理中间件
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use((err: any, _req: express.Request, res: express.Response) => {
+  console.error('Server Error:', err)
+  res.status(500).json({
+    id: `error_${Date.now()}`,
+    provider: 'error',
+    status: 'failed',
+    presetId: '',
+    message: 'AI 服务暂时不可用',
+    errorMessage: '服务器内部错误',
+    creditCost: 0,
+    createdAt: new Date().toISOString(),
+  })
+})
+
+// 启动服务器
+if (import.meta.url === `file://${process.argv[1]}`) {
+  app.listen(PORT, () => {
+    console.log(`🚀 AI Style Server running at http://localhost:${PORT}`)
+  })
+}
+
+export default app

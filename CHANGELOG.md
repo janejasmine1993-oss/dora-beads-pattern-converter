@@ -1,5 +1,141 @@
 # CHANGELOG
 
+## v0.7.2-real-ai-adapter-poc - 2026-06-07
+
+### 🎯 版本目标
+
+搭建真实 AI 接入的"准备层"和"最小调用闭环"，保留现有 mock 功能，新增 real provider 接入结构。支持环境变量动态切换 mock/real 模式。
+
+### ✨ 核心功能
+
+**后端代理服务**：
+- ✅ Express Node.js 后端服务 (server/index.ts)
+- ✅ POST /api/ai-style/generate 端点
+- ✅ 图片大小验证 (5MB 限制)
+- ✅ 图片格式验证 (JPG/PNG/WEBP)
+- ✅ 后端错误处理和返回标准化响应
+
+**AI Provider 工厂模式**：
+- ✅ aiRuntimeConfig.ts - 环境变量配置读取
+- ✅ aiProviderFactory.ts - 工厂函数 getAiProvider()
+- ✅ aiProviderTypes.ts - 统一的 Request/Result 接口
+- ✅ aiMockProvider.ts - Mock 提供者适配器
+- ✅ aiRealProvider.ts - 真实提供者适配器（POST 到后端代理）
+
+**前端改进**：
+- ✅ AiStyleImageUploader 添加 5MB 大小限制检查
+- ✅ AiStylePanel 显示当前运行模式和服务商
+- ✅ useAiStyle hook 集成 provider 工厂函数
+- ✅ 所有前端代码中无 API Key（安全原则）
+
+**安全文档**：
+- ✅ docs/AI_API_SECURITY.md - 安全检查清单和最佳实践
+- ✅ docs/AI_PROVIDER_RESEARCH.md - 4 大 AI 服务商对比分析
+
+**配置模板**：
+- ✅ .env.example - 所有必需的环境变量模板
+
+### 🔧 环境变量配置
+
+```bash
+# 运行模式
+VITE_AI_RUNTIME_MODE=mock              # 'mock' 或 'real'
+VITE_AI_PROVIDER=mock                  # 'mock' / 'tencent-hunyuan' / ...
+VITE_API_BASE_URL=http://localhost:3001
+
+# 后端配置（仅在 server/.env.local）
+TENCENT_SECRET_ID=xxx
+TENCENT_SECRET_KEY=xxx
+VOLCENGINE_API_KEY=xxx
+ALIYUN_DASHSCOPE_API_KEY=xxx
+OPENAI_API_KEY=xxx
+```
+
+### 📁 新增文件
+
+**后端服务**：
+- `server/index.ts` - Express 应用入口
+- `server/routes/aiStyle.ts` - AI 风格化路由
+- `server/package.json` - 后端依赖
+- `server/tsconfig.json` - 后端 TypeScript 配置
+
+**AI 服务层**：
+- `src/services/ai/aiRuntimeConfig.ts` - 运行时配置管理
+- `src/services/ai/aiProviderTypes.ts` - 接口定义
+- `src/services/ai/aiProviderFactory.ts` - 工厂函数
+- `src/services/ai/aiMockProvider.ts` - Mock 适配器
+- `src/services/ai/aiRealProvider.ts` - 真实适配器
+
+**文档**：
+- `docs/AI_API_SECURITY.md` - 安全指南（8 大检查项）
+- `docs/AI_PROVIDER_RESEARCH.md` - 服务商研究报告
+- `.env.example` - 环境变量模板
+
+### 🔄 修改文件
+
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 添加 5MB 检查
+- `src/components/UserCenter/AiStylePanel.tsx` - 显示运行模式信息
+- `src/hooks/useAiStyle.ts` - 使用 provider 工厂函数
+- `src/services/ai/aiRuntimeConfig.ts` - 移除前端 API Key 检查
+- `package.json` - 版本号更新到 0.7.2
+
+### ⚙️ 后端启动方式
+
+```bash
+# 进入 server 目录
+cd server
+
+# 安装依赖
+npm install
+
+# 开发模式（自动重载）
+npm run dev
+
+# 生产模式
+npm run build
+npm start
+```
+
+### 🔐 安全检查清单
+
+- [x] 前端代码中不存在任何 API Key
+- [x] API Key 只配置在 server/.env.local
+- [x] 后端代理验证图片大小和格式
+- [x] 后端错误处理不暴露内部实现细节
+- [x] 所有 API 调用都通过后端代理进行
+- [x] 环境变量通过 .env.example 模板文档化
+
+### ✅ 验证清单
+
+- [x] 后端代理服务启动成功
+- [x] POST /api/ai-style/generate 端点工作正常
+- [x] 图片大小限制 (5MB) 实现
+- [x] 图片格式验证 (JPG/PNG/WEBP) 实现
+- [x] Provider 工厂函数工作正常
+- [x] AiStylePanel 显示运行模式
+- [x] npm run build 通过
+- [x] npm run lint 通过
+- [x] 原有 mock 功能保留完整
+
+### 📝 后续任务
+
+1. **完整的真实 AI 集成**（v0.8）
+   - 实现腾讯混元真实调用代码（推荐）
+   - 添加用户认证中间件
+   - 实现速率限制和计费逻辑
+
+2. **监控和日志**（v0.9）
+   - 后端 API 调用日志
+   - 成本监控告警
+   - 错误率监控
+
+3. **CI/CD 优化**（v1.0）
+   - GitHub Actions 配置
+   - API Key 安全管理
+   - 自动化部署流程
+
+---
+
 ## v0.7.1-ai-style-panel-fix - 2026-06-07
 
 ### 🔧 修复内容

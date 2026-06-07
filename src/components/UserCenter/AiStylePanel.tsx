@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AiStyleImageUploader } from './AiStyleImageUploader'
 import type { AiStylePresetConfig, AiStyleSourceImage } from '../../types/aiStyle'
 import type { MembershipMock } from '../../services/mock/membershipMockService'
+import { aiRuntimeConfig } from '../../services/ai/aiRuntimeConfig'
 
 interface AiStylePanelProps {
   isLoggedIn: boolean
@@ -82,9 +83,19 @@ export function AiStylePanel({
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
       <h3 className="text-sm font-semibold text-gray-700 mb-3">人工智能优化</h3>
 
-      <p className="text-xs text-gray-500 mb-3 pb-3 border-b border-gray-200">
-        ⚠️ 当前为 mock 模式，暂未接入真实 AI API
-      </p>
+      <div className="text-xs text-gray-600 mb-3 pb-3 border-b border-gray-200 space-y-1">
+        <p>
+          <span className="font-semibold">运行模式：</span>
+          {aiRuntimeConfig.mode === 'mock' ? '📦 Mock（模拟）' : '🚀 Real（真实）'}
+        </p>
+        <p>
+          <span className="font-semibold">服务商：</span>
+          {aiRuntimeConfig.provider === 'mock' ? 'Mock' : aiRuntimeConfig.provider}
+        </p>
+        {aiRuntimeConfig.mode === 'mock' && (
+          <p className="text-gray-500">ℹ️ 当前为模拟模式，不会真实消耗 AI 配额</p>
+        )}
+      </div>
 
       {/* 图片上传器 */}
       <AiStyleImageUploader

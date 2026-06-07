@@ -24,6 +24,12 @@ export function AiStyleImageUploader({
       return
     }
 
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      alert(`图片大小超过 5MB 限制（当前：${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = e => {
       const result = e.target?.result as string

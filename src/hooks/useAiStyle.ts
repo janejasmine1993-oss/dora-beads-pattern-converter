@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import type { AiStyleRequest, AiStyleResult, AiStylePresetConfig, AiStyleSourceImage } from '../types/aiStyle'
+import type { AiStyleResult, AiStylePresetConfig, AiStyleSourceImage, AiPreset } from '../types/aiStyle'
 import { aiStyleMockService } from '../services/mock/aiStyleMockService'
+import { getAiProvider } from '../services/ai/aiProviderFactory'
 
 export function useAiStyle(userId: string | undefined) {
   const [presets, setPresets] = useState<AiStylePresetConfig[]>([])
@@ -38,17 +39,30 @@ export function useAiStyle(userId: string | undefined) {
     setError(null)
 
     try {
-      const request: AiStyleRequest = {
+      const provider = getAiProvider()
+      const result = await provider.call({
         userId,
+        presetId: presetId as AiPreset,
         sourceImage,
-        presetId: presetId as any,
         strength: 0.8,
         keepOriginalColors: true,
         targetUseCase: 'bead-pattern',
-      }
+      })
 
-      const result = await aiStyleMockService.mockStyleTransfer(userId, request)
-      setHistory([result, ...history])
+      if (result.status === 'success') {
+        const mockResult: AiStyleResult = {
+          id: result.id,
+          status: 'success',
+          presetId: result.presetId,
+          sourceImage,
+          message: result.message,
+          creditCost: result.creditCost,
+          createdAt: result.createdAt,
+        }
+        setHistory([mockResult, ...history])
+      } else {
+        setError(result.message || result.errorMessage || '处理失败')
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '处理失败'
       setError(message)
