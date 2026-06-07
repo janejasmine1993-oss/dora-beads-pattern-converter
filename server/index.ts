@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth'
 import { membershipRouter } from './routes/membership'
 import { creditsRouter } from './routes/credits'
 import { worksRouter } from './routes/works'
+import { uploadsRouter } from './routes/uploads'
 import { prisma } from './services/db'
 
 const app = express()
@@ -72,6 +73,9 @@ app.use('/api/credits', creditsRouter)
 
 // 作品路由
 app.use('/api/works', worksRouter)
+
+// 上传路由
+app.use('/api/uploads', uploadsRouter)
 
 // 错误处理中间件
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v0.8.0-e - ai-jobs-and-cos-storage - 2026-06-08
+
+### ✨ 核心改进
+
+**COS 文件存储服务**：
+- ✅ 创建 server/services/cosService.ts COS 上传服务
+- ✅ 支持 uploadBufferToCos / uploadBase64ToCos
+- ✅ 支持生成规范化 COS 存储路径
+- ✅ COS 密钥配置在 server/.env.local
+
+**文件上传 API**：
+- ✅ 新增 POST /api/uploads/image 图片上传接口
+- ✅ 支持 JPG / PNG / WEBP 格式，5MB 限制
+- ✅ 上传成功返回 fileUrl（COS URL）
+- ✅ uploaded_images 表自动记录
+
+**AI 任务记录**：
+- ✅ 创建 server/services/aiJobService.ts 任务记录服务
+- ✅ 支持 pending/processing/success/failed 状态
+- ✅ 记录 source_image_url / result_image_url
+- ✅ 记录 error_message 和 request_id
+
+**AI 优化流程改造**：
+- ✅ POST /api/ai-style/generate 需要登录和 Bearer token
+- ✅ 检查 AI 次数是否足够
+- ✅ AI 成功后才扣除 AI 次数
+- ✅ AI 失败不扣 AI 次数
+- ✅ 腾讯混元临时 URL 转存 COS
+- ✅ Mock 模式也生成 result 记录
+
+**前端改造**：
+- ✅ 新增 src/services/api/uploadsApi.ts 上传客户端
+- ✅ 支持 uploadImage(file) 上传到 /api/uploads/image
+- ✅ 错误处理：上传失败显示错误提示
+
+**安全特性**：
+- ✅ COS 密钥只在 server/.env.local（未追踪）
+- ✅ AI 优化接口需要认证
+- ✅ 用户只能访问自己的图片和任务
+- ✅ 防止 blob: 和 data: URL 长期保存
+
+---
+
 ## v0.8.0-d - works-postgresql-migration - 2026-06-08
 
 ### ✨ 核心改进
