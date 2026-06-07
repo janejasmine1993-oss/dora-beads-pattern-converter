@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { aiRuntimeConfig } from '../../services/ai/aiRuntimeConfig'
 import type { AiStyleSourceImage } from '../../types/aiStyle'
 
 interface AiStyleImageUploaderProps {
@@ -74,8 +75,17 @@ export function AiStyleImageUploader({
       <h3 className="text-sm font-semibold text-gray-700 mb-3">上传需要 AI 优化的图片</h3>
 
       <p className="text-xs text-gray-600 mb-4">
-        请先上传图片，再选择 AI 优化方式。当前为 mock 模式，不会真实调用 AI API。
+        请先上传图片，再选择 AI 优化方式。
       </p>
+      {aiRuntimeConfig.mode === 'mock' ? (
+        <p className="text-xs text-orange-600 mb-4">
+          💡 当前为 Mock 模式，不会真实调用 AI API，仅用于测试流程。
+        </p>
+      ) : (
+        <p className="text-xs text-green-600 mb-4">
+          ✅ 当前为 Real 真实 AI 模式，将通过后端代理调用腾讯混元生图。服务商：腾讯混元
+        </p>
+      )}
 
       {/* 当前工作台图片提示 */}
       {currentWorkspaceImage && !selectedImage && (
