@@ -15,15 +15,17 @@ export function useAuth() {
   // 初始化用户状态
   useEffect(() => {
     const init = async () => {
+      console.log('[useAuth] Initializing auth state with provider mode')
       const currentUser = await provider.getCurrentUser()
       const currentToken = provider.getToken()
+      console.log('[useAuth] Loaded user:', currentUser ? currentUser.email : 'null', 'Token:', currentToken ? 'exists' : 'null')
       setUser(currentUser)
       setToken(currentToken)
       setIsLoggedIn(currentUser !== null)
       setIsLoading(false)
     }
     init()
-  }, [])
+  }, [provider])
 
   const login = () => {
     // Mock 模式兼容：直接调用 mockLogin
@@ -50,15 +52,19 @@ export function useAuth() {
   }
 
   const register = async (email: string, password: string, nickname: string) => {
+    console.log('[useAuth.register] Starting registration', { email, nickname })
     setIsSubmitting(true)
     try {
       const result = await provider.register(email, password, nickname)
+      console.log('[useAuth.register] Provider returned:', { success: result.success, hasError: !!result.error })
       if (result.success && result.user && result.token) {
         setUser(result.user)
         setToken(result.token)
         setIsLoggedIn(true)
+        console.log('[useAuth.register] Registration successful')
         return { success: true }
       } else {
+        console.log('[useAuth.register] Registration failed:', result.error)
         return { success: false, error: result.error || '注册失败' }
       }
     } finally {

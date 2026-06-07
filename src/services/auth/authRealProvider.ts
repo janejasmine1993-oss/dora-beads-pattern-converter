@@ -36,12 +36,15 @@ function toUser(authUser: any): User {
 export const authRealProvider: AuthProvider = {
   async register(email: string, password: string, nickname: string) {
     try {
+      console.log('[AuthRealProvider] Register started', { email, apiUrl: API_BASE_URL })
       const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, nickname }),
       })
+      console.log('[AuthRealProvider] Register response status:', res.status)
       const data = (await res.json()) as LoginResponse | ErrorResponse
+      console.log('[AuthRealProvider] Register response data:', { success: data.success, hasError: 'error' in data })
 
       if (!data.success) {
         return { success: false, error: (data as ErrorResponse).error }
@@ -51,9 +54,11 @@ export const authRealProvider: AuthProvider = {
       const user = toUser(response.user)
       localStorage.setItem('dora_auth_token', response.token)
       localStorage.setItem('dora_auth_user', JSON.stringify(user))
+      console.log('[AuthRealProvider] Register success, user saved to localStorage')
       return { success: true, token: response.token, user }
     } catch (err) {
       const error = err instanceof Error ? err.message : '网络错误'
+      console.error('[AuthRealProvider] Register error:', error)
       return { success: false, error }
     }
   },

@@ -466,7 +466,11 @@ function App() {
   }
 
   function handleFeatureClick(feature: ComingSoonFeature) {
-    setComingSoonFeature(feature)
+    if (feature === 'login') {
+      setIsUserCenterOpen(true)
+    } else {
+      setComingSoonFeature(feature)
+    }
   }
 
   function handleStartCreating() {
