@@ -6,5 +6,12 @@
   "hosting": {
     "disableFunctionalDomain": false
   },
+  "cloudRunServices": [
+    {
+      "name": "dora-beads-api",
+      "servicePath": "server",
+      "buildDir": "server"
+    }
+  ],
   "version": "2.0"
 }

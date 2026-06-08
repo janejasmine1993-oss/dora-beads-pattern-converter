@@ -11,9 +11,13 @@ COPY prisma ./prisma
 RUN npm ci
 
 # 复制源代码
-COPY src ./src
 COPY tsconfig.json ./
 COPY index.ts ./
+COPY routes ./routes
+COPY services ./services
+COPY middleware ./middleware
+COPY types ./types
+COPY scripts ./scripts
 
 # 生成 Prisma Client
 RUN npx prisma generate
