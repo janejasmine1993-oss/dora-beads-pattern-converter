@@ -1,0 +1,10 @@
+{
+  "envId": "YOUR_ENV_ID",
+  "projectPath": ".",
+  "functionRoot": "server",
+  "functions": [],
+  "hosting": {
+    "disableFunctionalDomain": false
+  },
+  "version": "2.0"
+}

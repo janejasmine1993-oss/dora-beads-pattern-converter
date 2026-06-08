@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v0.8.1-cloudbase-mvp-staging - 2026-06-08
+
+### 🚀 CloudBase MVP 部署准备
+
+**部署配置文件**：
+- ✅ 新增 cloudbaserc.json 云开发配置
+- ✅ 新增 server/Dockerfile 容器化部署
+- ✅ 新增 server/.dockerignore Docker 忽略列表
+- ✅ 新增 .env.production 生产环境配置
+
+**部署文档**：
+- ✅ 新增 docs/CLOUDBASE_MVP_DEPLOYMENT.md 完整部署指南
+- ✅ 新增 docs/nginx.conf Nginx 反向代理示例
+- ✅ 说明 Supabase 免费数据库方案
+- ✅ 说明 CloudBase 静态托管和云托管部署流程
+
+**前端生产优化**：
+- ✅ 配置 VITE_API_BASE_URL=/api（支持相对路径）
+- ✅ 保持 AI Mock 和 COS Mock（MVP 阶段）
+- ✅ 支持生产环境环境变量配置
+
+**后端生产优化**：
+- ✅ Dockerfile 支持多阶段编译
+- ✅ 健康检查端点配置
+- ✅ 环境变量支持云部署
+- ✅ Prisma migrate 自动执行
+
+**当前 MVP 状态**：
+- ✅ 登录系统：真实
+- ✅ 数据库：真实（需配置云实例）
+- ✅ 会员系统：真实
+- ✅ AI 次数：真实
+- ✅ 作品保存：真实
+- ✅ AI 优化：Mock
+- ✅ COS 存储：Mock
+- ❌ 支付系统：未接入
+
+**部署成本**：
+- Supabase：免费 + 按量
+- CloudBase：100 万次调用免费
+- 预估月成本：$0-50
+
+---
+
 ## v0.8.0-e - ai-jobs-and-cos-storage - 2026-06-08
 
 ### ✨ 核心改进
