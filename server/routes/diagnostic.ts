@@ -1,4 +1,5 @@
 import express from 'express'
+import { randomUUID } from 'crypto'
 import { prisma } from '../services/db'
 import { hashPassword, signToken } from '../services/authService'
 import { findUserByEmail } from '../services/dbUserStore'
@@ -19,7 +20,7 @@ diagnosticRouter.get('/', async (req, res) => {
   } catch (err: any) {
     results.tests.database_connection = {
       status: 'failed',
-      error: err.message,
+      error: err.message || String(err),
     }
   }
 
@@ -34,14 +35,13 @@ diagnosticRouter.get('/', async (req, res) => {
   } catch (err: any) {
     results.tests.user_table_query = {
       status: 'failed',
-      error: err.message,
+      error: err.message || String(err),
     }
   }
 
   // 测试 3: bcryptjs 密码 hash
   try {
-    const testPassword = 'test123'
-    const hash = await hashPassword(testPassword)
+    const hash = await hashPassword('test123')
     results.tests.bcryptjs_hash = {
       status: 'ok',
       message: '密码 hash 成功',
@@ -50,7 +50,7 @@ diagnosticRouter.get('/', async (req, res) => {
   } catch (err: any) {
     results.tests.bcryptjs_hash = {
       status: 'failed',
-      error: err.message,
+      error: err.message || String(err),
     }
   }
 
@@ -65,17 +65,16 @@ diagnosticRouter.get('/', async (req, res) => {
   } catch (err: any) {
     results.tests.jwt_generation = {
       status: 'failed',
-      error: err.message,
+      error: err.message || String(err),
     }
   }
 
-  // 测试 5: 完整注册流程（使用唯一邮箱）
+  // 测试 5: 完整注册流程
   try {
     const testEmail = `diagnostic-${Date.now()}@test.com`
     const testPassword = 'Test@123456'
     const testNickname = 'DiagnosticTest'
 
-    // 检查邮箱是否已存在
     const existing = await findUserByEmail(testEmail)
     if (existing) {
       results.tests.full_register_flow = {
@@ -83,8 +82,6 @@ diagnosticRouter.get('/', async (req, res) => {
         message: '测试邮箱已存在',
       }
     } else {
-      // 进行完整注册测试
-      const { randomUUID } = await import('crypto')
       const userId = randomUUID()
       const passwordHash = await hashPassword(testPassword)
 
@@ -109,7 +106,7 @@ diagnosticRouter.get('/', async (req, res) => {
   } catch (err: any) {
     results.tests.full_register_flow = {
       status: 'failed',
-      error: err.message,
+      error: err.message || String(err),
       error_code: err.code,
     }
   }
