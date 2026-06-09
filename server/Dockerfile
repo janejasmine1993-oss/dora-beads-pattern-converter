@@ -44,6 +44,9 @@ RUN npm ci --only=production && \
 # 从构建阶段复制编译结果
 COPY --from=builder /app/server/dist ./dist
 
+# 初始化数据库（创建表）
+RUN npx prisma migrate deploy || true
+
 # 设置环境
 ENV NODE_ENV=production
 ENV PORT=3001
