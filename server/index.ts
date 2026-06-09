@@ -8,6 +8,7 @@ import { membershipRouter } from './routes/membership'
 import { creditsRouter } from './routes/credits'
 import { worksRouter } from './routes/works'
 import { uploadsRouter } from './routes/uploads'
+import { diagnosticRouter } from './routes/diagnostic'
 import { prisma } from './services/db'
 
 const app = express()
@@ -76,6 +77,9 @@ app.use('/api/works', worksRouter)
 
 // 上传路由
 app.use('/api/uploads', uploadsRouter)
+
+// 诊断路由
+app.use('/api/diagnostic', diagnosticRouter)
 
 // 错误处理中间件
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
