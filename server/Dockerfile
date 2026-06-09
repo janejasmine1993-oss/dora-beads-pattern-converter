@@ -3,21 +3,21 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# 复制 package 文件
-COPY package.json package-lock.json ./
-COPY prisma ./prisma
+# 复制 server 目录下的 package 文件
+COPY server/package.json server/package-lock.json ./
+COPY server/prisma ./prisma
 
 # 安装依赖
 RUN npm ci
 
-# 复制源代码
-COPY tsconfig.json ./
-COPY index.ts ./
-COPY routes ./routes
-COPY services ./services
-COPY middleware ./middleware
-COPY types ./types
-COPY scripts ./scripts
+# 复制源代码（从 server 目录）
+COPY server/tsconfig.json ./
+COPY server/index.ts ./
+COPY server/routes ./routes
+COPY server/services ./services
+COPY server/middleware ./middleware
+COPY server/types ./types
+COPY server/scripts ./scripts
 
 # 生成 Prisma Client
 RUN npx prisma generate
