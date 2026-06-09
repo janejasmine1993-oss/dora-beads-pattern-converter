@@ -44,8 +44,9 @@ RUN npm ci --only=production && \
 # 从构建阶段复制编译结果
 COPY --from=builder /app/server/dist ./dist
 
-# 初始化数据库（创建表）
-RUN npx prisma migrate deploy || true
+# 复制启动脚本
+COPY scripts/start.sh ./
+RUN chmod +x ./start.sh
 
 # 设置环境
 ENV NODE_ENV=production
@@ -58,6 +59,6 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# 使用 dumb-init 启动应用
+# 使用 dumb-init 启动应用，先执行迁移再启动
 ENTRYPOINT ["/sbin/dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["sh", "./start.sh"]
