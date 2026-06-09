@@ -61,8 +61,17 @@ authRouter.post('/register', async (req, res) => {
       user: authUser,
     })
   } catch (err) {
-    console.error('[Auth] Register error:', err)
-    res.status(500).json({ success: false, error: '注册失败，请稍后重试' } as ErrorResponse)
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('[Auth] Register error:', errorMsg)
+
+    // 判断错误类型
+    if (errorMsg.includes('Unique constraint failed')) {
+      res.status(400).json({ success: false, error: '该邮箱已被注册' } as ErrorResponse)
+    } else if (errorMsg.includes('Cannot find')) {
+      res.status(500).json({ success: false, error: '数据库错误：表不存在' } as ErrorResponse)
+    } else {
+      res.status(500).json({ success: false, error: `注册失败：${errorMsg}` } as ErrorResponse)
+    }
   }
 })
 
