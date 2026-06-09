@@ -1,5 +1,5 @@
 {
-  "envId": "YOUR_ENV_ID",
+  "envId": "dora-beads-prod-d3fnxast620bb482",
   "projectPath": ".",
   "functionRoot": "server",
   "functions": [],
@@ -10,7 +10,8 @@
     {
       "name": "dora-beads-api",
       "servicePath": "server",
-      "buildDir": "server"
+      "buildDir": "server",
+      "dockerfile": "server/Dockerfile"
     }
   ],
   "version": "2.0"
