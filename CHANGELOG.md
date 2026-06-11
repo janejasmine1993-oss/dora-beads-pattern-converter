@@ -1,5 +1,130 @@
 # CHANGELOG
 
+## v0.9.0-lite - 2026-06-11
+
+### 🎯 战略调整：推出会员体验版（LITE_MODE）
+
+**目标**：零成本、无数据库的快速上线版本  
+**影响**：项目从"PostgreSQL 迁移方案"改为"轻量体验版"
+
+### ✨ 新增功能
+
+#### LITE_MODE 配置系统
+- ✅ 新增 `VITE_LITE_MODE` 环境变量
+- ✅ 新增 `VITE_MEMBER_ACCESS_CODE` 会员口令配置
+- ✅ 创建 `src/config/liteMode.ts` 配置管理
+- ✅ 创建 `src/AppWithLiteMode.tsx` 应用包装层
+
+#### 会员口令验证
+- ✅ 新增 `MemberAccessModal` 组件
+- ✅ 首次访问时显示口令输入框
+- ✅ 新增 `VITE_ACCESS_CODE_VERSION` 环境变量（版本号强制更新机制）
+- ✅ 口令验证通过后保存访问权限和版本号到 localStorage
+- ✅ 版本号不匹配时自动清除旧授权，强制重新输入口令
+- ✅ 支持其他标签页同步访问状态
+- ✅ 导出 `clearAccessCodeAuth()` 函数，支持程序化清除授权
+
+#### 本地作品存储
+- ✅ 创建 `localWorksService` 本地存储服务
+- ✅ 使用 localStorage 保存最近 10 个作品
+- ✅ 支持作品 CRUD 操作（创建、读取、更新、删除）
+- ✅ 自动按创建时间排序
+
+#### AppHeader 隐藏功能
+- ✅ 根据 LITE_MODE_CONFIG 动态显示/隐藏菜单项
+- ✅ LITE_MODE 下隐藏："我的作品" "会员" "AI次数" "兑换码" "登录"
+- ✅ 添加版本标识标签（"Lite 会员体验版"）
+
+#### 环境配置
+- ✅ 更新 `.env.example` 添加 LITE_MODE、MEMBER_ACCESS_CODE、ACCESS_CODE_VERSION 参数说明
+- ✅ 更新 `.env.local` 启用 LITE_MODE 为默认，添加 ACCESS_CODE_VERSION=2026-06
+- ✅ `.env.production` 配置为 LITE_MODE，添加 ACCESS_CODE_VERSION=2026-06
+- ✅ 提示生产环境上线前必须修改 VITE_MEMBER_ACCESS_CODE 为实际口令
+
+### 📝 文档更新
+
+- ✅ README.md：添加 LITE_MODE 说明、启动指南、口令机制说明
+- ✅ docs/LITE_MODE_SETUP.md：完整的 LITE_MODE 配置指南（含口令管理和版本号控制章节）
+- ✅ 说明无需 PostgreSQL、无需后端、纯前端部署
+- ✅ 详细说明每月/每期更换口令的步骤
+
+### ⚠️ 会员口令机制说明
+
+**固定会员口令 + 版本号强制更新：**
+
+- **不支持一人一码**：所有授权会员共享同一口令（早期内测方案）
+- **不支持随机临时口令**：不生成过期的验证码
+- **不接后端/数据库**：口令由人工在环境变量中管理
+- **每月/每期更换**：修改 `VITE_MEMBER_ACCESS_CODE` 和 `VITE_ACCESS_CODE_VERSION` 即可
+- **强制更新机制**：版本号不匹配时自动清除旧授权，用户需重新输入新口令
+
+**这是 LITE_MODE 的早期会员体验方案，未来如需一人一码，需要恢复后端 + PostgreSQL 的完整用户认证系统。**
+
+### 🔄 架构变化
+
+**移除依赖**：
+- ❌ 不再依赖 PostgreSQL
+- ❌ 不再依赖后端 Node.js 服务
+- ❌ 不再需要注册登录系统
+- ❌ 不再需要会员管理系统
+
+**保留（代码未删除，仅隐藏）**：
+- ✅ 注册登录代码（可在 LITE_MODE=false 时恢复）
+- ✅ 我的作品云端库代码（可恢复）
+- ✅ 会员系统代码（可恢复）
+- ✅ AI 次数代码（可恢复）
+- ✅ 兑换码代码（可恢复）
+- ✅ 云端保存代码（可恢复）
+
+**替代方案**：
+- 用户认证 → 简单口令验证
+- 作品云端存储 → localStorage 本地存储
+- 会员系统 → 人工管理
+- AI 次数计费 → Mock 模式（无限）
+
+### 🎯 保留的核心功能
+
+✅ 图片上传  
+✅ 拼豆图纸生成  
+✅ 品牌色号切换  
+✅ 图纸预览  
+✅ 色号用量统计  
+✅ PNG/PDF/CSV 导出  
+
+### 📊 成本影响
+
+| 指标 | 旧方案 | 新方案 | 节省 |
+|------|--------|--------|------|
+| 月成本 | ¥300-600 | ¥0 | ¥300-600 |
+| 年成本 | ¥3,600-7,200 | ¥0 | ¥3,600-7,200 |
+| 部署平台 | CloudBase + RDS | CloudBase 或其他静态托管 | 100% 静态 |
+| 维护工作 | 数据库备份、监控 | 无 | 99% 减少 |
+
+### 🚀 部署方式
+
+**之前**：需要后端 + 数据库  
+**现在**：`npm run build` → 部署到 CloudBase（推荐）或 Cloudflare Pages 等
+
+#### CloudBase 配置调整
+- ✅ 创建备份：`docs/cloudbase-config-backup-v0.8.1.json`（保留原后端配置）
+- ✅ 更新 `cloudbaserc.json` 为静态托管配置
+- ✅ 移除 `cloudRunServices` 后端服务配置
+- ✅ 仅部署 `dist/` 目录到 CloudBase 静态托管
+- ✅ 不部署 `server/`（后端代码完全保留）
+
+### 🔮 未来扩展
+
+LITE_MODE 保留了所有原有功能代码，只是通过配置隐藏：
+
+- 如需恢复完整功能，仅需修改 `.env.local`：`VITE_LITE_MODE=false`
+- 无需重写任何功能代码
+- 所有原有的认证、数据库、会员逻辑完整保留
+- 可随时迁移回完整版本
+
+---
+
+# CHANGELOG
+
 ## v0.8.1-cloudbase-mvp-staging - 2026-06-08
 
 ### 🚀 CloudBase MVP 部署准备

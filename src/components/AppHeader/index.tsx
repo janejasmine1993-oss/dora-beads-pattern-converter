@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LITE_MODE, LITE_MODE_CONFIG, APP_VERSION_LABEL } from '../../config/liteMode'
 
 interface AppHeaderProps {
   currentPage: 'home' | 'workspace' | 'ai-optimize'
@@ -21,14 +22,15 @@ export function AppHeader({
     { id: 'home', label: '首页', page: 'home' as const },
     { id: 'workspace', label: '工作台', page: 'workspace' as const },
     { id: 'ai-optimize', label: 'AI 优化', page: 'ai-optimize' as const },
+    // "我的作品"始终显示，LITE_MODE 下改为本地存储
     { id: 'works', label: '我的作品', feature: 'works' as const },
-    { id: 'membership', label: '会员', feature: 'membership' as const },
+    ...(LITE_MODE_CONFIG.enableMembership ? [{ id: 'membership', label: '会员', feature: 'membership' as const }] : []),
     { id: 'help', label: '帮助', feature: 'help' as const },
   ]
 
   const featureItems = [
-    { id: 'redeem', label: '兑换码', feature: 'redeem' as const },
-    { id: 'login', label: '内测登录', feature: 'login' as const },
+    ...(LITE_MODE_CONFIG.enableRedeemCode ? [{ id: 'redeem', label: '兑换码', feature: 'redeem' as const }] : []),
+    ...(LITE_MODE_CONFIG.enableAuth ? [{ id: 'login', label: '内测登录', feature: 'login' as const }] : []),
   ]
 
   return (
@@ -74,26 +76,40 @@ export function AppHeader({
 
           {/* Desktop Right Section */}
           <div className="hidden shrink-0 items-center gap-4 md:flex">
+            {/* LITE_MODE 版本标识 */}
+            {LITE_MODE && (
+              <div className="text-xs font-bold px-3 py-1 rounded-full bg-pink-100 text-pink-600">
+                {APP_VERSION_LABEL}
+              </div>
+            )}
+
             {/* AI Credits Display */}
-            <div className="inline-flex min-h-12 items-center gap-2 rounded-full bg-gradient-to-r from-[#f6e9ff] to-[#f0e6ff] px-5 text-base font-bold text-[#8d49df] shadow-[0_8px_18px_rgba(139,88,214,0.12)]">
-              <span aria-hidden="true">✦</span>
-              AI 次数 12
-            </div>
+            {LITE_MODE_CONFIG.enableAiCredits && (
+              <div className="inline-flex min-h-12 items-center gap-2 rounded-full bg-gradient-to-r from-[#f6e9ff] to-[#f0e6ff] px-5 text-base font-bold text-[#8d49df] shadow-[0_8px_18px_rgba(139,88,214,0.12)]">
+                <span aria-hidden="true">✦</span>
+                AI 次数 12
+              </div>
+            )}
 
             {/* Redeem Button */}
-            <button
-              onClick={() => onFeatureClick('redeem')}
-              className="min-h-12 rounded-full border-2 border-[#ff5d91] bg-white px-6 text-base font-bold text-[#ff2f70] shadow-[0_8px_18px_rgba(255,95,144,0.10)] transition hover:-translate-y-0.5 hover:bg-[#fff5f8]"
-            >
-              兑换码
-            </button>
+            {LITE_MODE_CONFIG.enableRedeemCode && (
+              <button
+                onClick={() => onFeatureClick('redeem')}
+                className="min-h-12 rounded-full border-2 border-[#ff5d91] bg-white px-6 text-base font-bold text-[#ff2f70] shadow-[0_8px_18px_rgba(255,95,144,0.10)] transition hover:-translate-y-0.5 hover:bg-[#fff5f8]"
+              >
+                兑换码
+              </button>
+            )}
 
-            <button
-              onClick={() => onFeatureClick('login')}
-              className="min-h-12 rounded-full bg-gradient-to-r from-[#ff2f70] to-[#f51f66] px-7 text-base font-bold text-white shadow-[0_12px_24px_rgba(245,38,104,0.25)] transition hover:-translate-y-0.5"
-            >
-              内测登录
-            </button>
+            {/* Login Button */}
+            {LITE_MODE_CONFIG.enableAuth && (
+              <button
+                onClick={() => onFeatureClick('login')}
+                className="min-h-12 rounded-full bg-gradient-to-r from-[#ff2f70] to-[#f51f66] px-7 text-base font-bold text-white shadow-[0_12px_24px_rgba(245,38,104,0.25)] transition hover:-translate-y-0.5"
+              >
+                内测登录
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
