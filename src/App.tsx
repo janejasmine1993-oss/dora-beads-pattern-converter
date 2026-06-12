@@ -200,7 +200,7 @@ function App() {
       let cells: PatternCell[] = []
 
       if (colorMatchMode === 'originalColorPriority') {
-        // Original color priority: directly match each pixel to nearest brand color
+        // Original color priority: directly match each pixel RGB to brand color
         const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
         cells = pixels.map(px => {
           if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
@@ -212,7 +212,7 @@ function App() {
           return { row: px.y, col: px.x, isTransparent: false, color }
         })
       } else {
-        // Standard mode: quantize colors first, then match
+        // Standard mode: quantize to max colors, then match each cluster
         const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
         const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
         const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
@@ -273,13 +273,14 @@ function App() {
       const labCache = buildLabCache(palette)
       const nonTransparent = pixels.filter(px => !px.isTransparent)
       const transparentCount = pixels.length - nonTransparent.length
-      const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
 
       const w = params.gridCols
       const h = params.gridRows
+
       let cells: PatternCell[] = []
 
       if (colorMatchMode === 'originalColorPriority') {
+        // Original color priority: directly match each pixel RGB to brand color
         const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
         cells = pixels.map((px, idx) => {
           const col = idx % w
@@ -293,10 +294,10 @@ function App() {
           return { row, col, isTransparent: false, color }
         })
       } else {
-        // Use maxColors limit or preserve original colors
+        // Standard mode: quantize to max colors, then match each cluster
+        const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
         const colorLimit = params.preserveColorCount ? ntRgb.length : maxColors
         const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, colorLimit) : []
-
         const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
         for (const c of clusters) {
           const key = c.join(',')
@@ -312,6 +313,7 @@ function App() {
           return { row, col, isTransparent: false, color }
         })
       }
+
       if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length
@@ -333,11 +335,11 @@ function App() {
     const labCache = buildLabCache(palette)
     const nonTransparent = pixels.filter(px => !px.isTransparent)
     const transparentCount = pixels.length - nonTransparent.length
-    const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
 
-    let cells: PatternCell[] = []
+    let cells: PatternCell[]
 
     if (colorMatchMode === 'originalColorPriority') {
+      // Original color priority: directly match each pixel RGB to brand color
       const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
       cells = pixels.map(px => {
         if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
@@ -349,6 +351,8 @@ function App() {
         return { row: px.y, col: px.x, isTransparent: false, color }
       })
     } else {
+      // Standard mode: quantize to max colors, then match each cluster
+      const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
       const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
       const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
       for (const c of clusters) {
