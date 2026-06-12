@@ -62,6 +62,9 @@ function App() {
   // ── Pattern generation ──────────────────────────────────────────────────────
   const [width, setWidth] = useState(52)
   const [height, setHeight] = useState(52)
+  const [sizeMode, setSizeMode] = useState<'preset' | 'custom' | 'originalRatio'>('preset')
+  const [ratioLongSide, setRatioLongSide] = useState(104)
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
   const [brand, setBrand] = useState<BrandName>('MARD')
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
@@ -109,6 +112,13 @@ function App() {
     setCellHistory(null)
     setPickedSourceColor(null)
     setShowCropModal(true)  // Auto-open crop after upload
+
+    // Capture original image dimensions for aspect ratio mode
+    const img = new Image()
+    img.onload = () => {
+      setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight })
+    }
+    img.src = url
   }
 
   function handleCropConfirm(croppedUrl: string) {
@@ -291,6 +301,25 @@ function App() {
       transparentCount,
       ...(prev ? {} : {}),
     }))
+  }
+
+  function calcSizeByRatio(longSide: number): { width: number; height: number } {
+    if (!imageDimensions) return { width: longSide, height: longSide }
+    const isLandscape = imageDimensions.width >= imageDimensions.height
+    const ratio = isLandscape
+      ? imageDimensions.height / imageDimensions.width
+      : imageDimensions.width / imageDimensions.height
+    if (isLandscape) {
+      return {
+        width: longSide,
+        height: Math.max(1, Math.round(longSide * ratio))
+      }
+    } else {
+      return {
+        width: Math.max(1, Math.round(longSide * ratio)),
+        height: longSide
+      }
+    }
   }
 
   function handleSizeChange(w: number, h: number) {
@@ -722,6 +751,11 @@ function App() {
                 onSizeChange={handleSizeChange}
                 workTitle={workTitle}
                 onWorkTitleChange={setWorkTitle}
+                sizeMode={sizeMode}
+                onSizeModeChange={setSizeMode}
+                ratioLongSide={ratioLongSide}
+                onRatioLongSideChange={setRatioLongSide}
+                calcSizeByRatio={calcSizeByRatio}
               />
               <ColorControlPanel
                 maxColors={maxColors} mergeThreshold={mergeThreshold}

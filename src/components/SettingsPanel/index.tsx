@@ -8,6 +8,11 @@ interface SettingsPanelProps {
   onSizeChange: (w: number, h: number) => void
   workTitle: string
   onWorkTitleChange: (v: string) => void
+  sizeMode?: 'preset' | 'custom' | 'originalRatio'
+  onSizeModeChange?: (mode: 'preset' | 'custom' | 'originalRatio') => void
+  ratioLongSide?: number
+  onRatioLongSideChange?: (value: number) => void
+  calcSizeByRatio?: (longSide: number) => { width: number; height: number }
 }
 
 export function SettingsPanel({
@@ -16,6 +21,11 @@ export function SettingsPanel({
   onSizeChange,
   workTitle,
   onWorkTitleChange,
+  sizeMode = 'preset',
+  onSizeModeChange,
+  ratioLongSide = 104,
+  onRatioLongSideChange,
+  calcSizeByRatio,
 }: SettingsPanelProps) {
   const [customW, setCustomW] = useState(String(width))
   const [customH, setCustomH] = useState(String(height))
@@ -51,6 +61,25 @@ export function SettingsPanel({
       />
 
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图纸尺寸</p>
+      <div className="flex gap-1 mb-3">
+        {(['preset', 'custom', 'originalRatio'] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => onSizeModeChange?.(mode)}
+            className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+              sizeMode === mode
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            {mode === 'preset' && '预设'}
+            {mode === 'custom' && '自定义'}
+            {mode === 'originalRatio' && '原图比例'}
+          </button>
+        ))}
+      </div>
+
+      {sizeMode === 'preset' && (
       <div className="grid grid-cols-3 gap-1 mb-3">
         {PRESET_SIZES.map((s) => (
           <button
@@ -66,8 +95,18 @@ export function SettingsPanel({
           </button>
         ))}
       </div>
+      )}
 
+      {sizeMode === 'custom' && (
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">自定义尺寸</p>
+      )}
+
+      {sizeMode === 'originalRatio' && (
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">长边尺寸</p>
+      )}
+
+      {sizeMode === 'custom' && (
+      <>
       <div className="flex gap-2 mb-2">
         <div className="flex-1">
           <label className="text-xs text-gray-500 mb-1 block">宽（格）</label>
@@ -94,6 +133,37 @@ export function SettingsPanel({
           />
         </div>
       </div>
+      </>
+      )}
+
+      {sizeMode === 'originalRatio' && (
+      <>
+      <div className="flex gap-2 mb-2">
+        <div className="flex-1">
+          <label className="text-xs text-gray-500 mb-1 block">长边（格）</label>
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={ratioLongSide}
+            onChange={(e) => {
+              const val = Math.max(1, Math.min(500, parseInt(e.target.value) || 104))
+              onRatioLongSideChange?.(val)
+              const dims = calcSizeByRatio?.(val)
+              if (dims) onSizeChange(dims.width, dims.height)
+            }}
+            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs text-gray-500 mb-1 block">计算结果</label>
+          <div className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 text-gray-700 flex items-center">
+            {width} × {height}
+          </div>
+        </div>
+      </div>
+      </>
+      )}
 
       <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 mb-4">
         <p className="font-medium text-gray-700 mb-1">成品尺寸（每格 2.6mm）</p>
