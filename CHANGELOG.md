@@ -1,14 +1,18 @@
 # CHANGELOG
 
-## v0.9.0-lite - 2026-06-11
+## v0.9.0-lite - 2026-06-11 ~ 2026-06-12
 
 ### 🚀 部署信息
 
 **版本标签**：`v0.9.0-lite`  
-**部署日期**：2026-06-11  
-**部署平台**：腾讯云 CloudBase（静态托管）  
-**公网访问**：https://dora-beads-prod-d3fnxast620bb482-1440665484.tcloudbaseapp.com  
-**部署状态**：✅ 已部署到生产环境
+**部署日期**：2026-06-11（CloudBase）/ 2026-06-12（Cloudflare Pages）  
+**主线部署平台**：Cloudflare Pages（推荐，已验证成功）  
+**主线公网访问**：https://dora-beads-pattern-converter-git.pages.dev  
+**主线部署状态**：✅ 已部署到生产环境
+
+**备选部署平台**：腾讯云 CloudBase（HTTP 418 未解决，暂停排查）  
+**备选公网访问**：https://dora-beads-prod-d3fnxast620bb482-1440665484.tcloudbaseapp.com  
+**备选部署状态**：⚠️ 文件已部署，HTTP 访问服务路由配置问题未解决
 
 **版本类型**：**无数据库安全版本 - 可安全回滚**
 - ❌ 无后端依赖（server/ 代码完整保留，未部署）

@@ -62,21 +62,23 @@ npm run dev
 
 ## 线上部署
 
-**v0.9.0-lite** 是纯前端应用，已针对 CloudBase 静态托管优化。
+**v0.9.0-lite** 是纯前端应用，支持多平台部署。
 
 ### 部署方案
 
-**主线部署**：腾讯云 CloudBase（推荐）
+**主线部署**：Cloudflare Pages（已验证，推荐）
 ```bash
 npm run build
-tcb hosting deploy dist
+# 通过 GitHub 连接 Cloudflare Pages 自动部署
+# 或使用 wrangler CLI: wrangler pages deploy dist
 ```
+公网地址：https://dora-beads-pattern-converter-git.pages.dev
 
 **备选方案**：
-- Cloudflare Pages：`wrangler pages deploy dist`
+- 腾讯云 CloudBase：`tcb hosting deploy dist`（HTTP 路由配置问题，暂停排查）
 - GitHub Pages / Vercel / Netlify：参考各平台文档
 
-**成本**：¥0/月（静态托管免费）
+**成本**：¥0/月（所有方案均免费）
 
 **配置**：
 - 只部署 `dist/` 目录
