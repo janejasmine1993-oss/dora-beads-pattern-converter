@@ -28,11 +28,11 @@ type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | 
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
-import { extractPixels } from './lib/image/pixelate'
 import { samplePixelGrid } from './lib/image/samplePixelGrid'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { mergeLowUsageColors } from './lib/image/mergeColors'
 import { clusterColors, isKeyFacialColor } from './lib/image/clustering'
+import { applySampling, type SamplingMode } from './lib/image/sampling'
 import { computeColorStats } from './lib/utils/stats'
 import { getPalette } from './data/palettes'
 import { transformImage, type ImageTransformOp } from './lib/image/transform'
@@ -67,7 +67,7 @@ function App() {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
   const [brand, setBrand] = useState<BrandName>('MARD')
   const [colorMatchMode, setColorMatchMode] = useState<'standard' | 'originalColorPriority'>('standard')
-  const samplingMode = 'average' // 默认使用高质量采样
+  const [samplingMode, setSamplingMode] = useState<SamplingMode>('average')
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
@@ -190,8 +190,19 @@ function App() {
     try {
       const img = await loadImage(url)
       const cropped = cropTransparentBorder(img)
-      const canvas = resizeWithContain(cropped, width, height, samplingMode)
-      const pixels = extractPixels(canvas)
+      const canvas = resizeWithContain(cropped, width, height)
+
+      // Use true sampling instead of extracting from smoothed canvas
+      const sampledPixels = applySampling(canvas, width, height, samplingMode)
+
+      // Convert sampled pixels to PixelCell format
+      const pixels: PixelCell[] = sampledPixels.map((px, idx) => {
+        const row = Math.floor(idx / width)
+        const col = idx % width
+        const isTransparent = px.a < 32
+        return { x: col, y: row, r: px.r, g: px.g, b: px.b, a: px.a, hex: `#${px.r.toString(16).padStart(2, '0')}${px.g.toString(16).padStart(2, '0')}${px.b.toString(16).padStart(2, '0')}`, isTransparent }
+      })
+
       setRawPixels(pixels)
       const palette = getPalette(brand)
       const labCache = buildLabCache(palette)
@@ -202,37 +213,9 @@ function App() {
 
       if (colorMatchMode === 'originalColorPriority') {
         // Original color priority: cluster first, then match to brand colors
-        const uniqueRgbs = Array.from(new Set(
-          nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
-        )).map(key => {
-          const [r, g, b] = key.split(',').map(Number) as [number, number, number]
-          return [r, g, b] as [number, number, number]
-        })
-
-        const clusterK = Math.min(12, Math.max(4, Math.ceil(uniqueRgbs.length / 8)))
-        const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
-
-        // Map cluster centers to brand colors
-        const centerToBrand = new Map<number, PaletteColor>()
-        for (let i = 0; i < centers.length; i++) {
-          const [r, g, b] = centers[i]
-          centerToBrand.set(i, matchColor(r, g, b, palette, labCache))
-        }
-
-        // Map pixels to clusters
-        const rgbToCluster = new Map<string, number>()
-        for (let i = 0; i < uniqueRgbs.length; i++) {
-          const [r, g, b] = uniqueRgbs[i]
-          rgbToCluster.set(`${r},${g},${b}`, assignments[i])
-        }
-
-        cells = pixels.map(px => {
-          if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-          const key = `${px.r},${px.g},${px.b}`
-          const clusterIdx = rgbToCluster.get(key) || 0
-          const color = centerToBrand.get(clusterIdx) || palette[0]
-          return { row: px.y, col: px.x, isTransparent: false, color }
-        })
+        cells = generateCellsWithClustering(pixels, palette, labCache)
+        // Isolated pixel cleanup: replace lonely pixels with surrounding color
+        cells = cleanupIsolatedPixels(cells, width, height, palette)
       } else {
         // Standard mode: independent matching with facial color protection
         const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
@@ -304,23 +287,28 @@ function App() {
       const w = params.gridCols
       const h = params.gridRows
 
-      // Match each pixel RGB directly to nearest brand color (no quantization)
-      const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
-      let cells = pixels.map((px, idx) => {
-        const col = idx % w
-        const row = Math.floor(idx / w)
-        if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
-        const key = `${px.r},${px.g},${px.b}`
-        if (!pixelColorCache.has(key)) {
-          pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
-        }
-        const color = pixelColorCache.get(key)!
-        return { row, col, isTransparent: false, color }
-      })
+      let cells: PatternCell[] = []
 
-      // Only apply color merging in standard mode, not in originalColorPriority
-      if (colorMatchMode === 'standard' && mergeThreshold > 0) {
-        cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+      if (colorMatchMode === 'originalColorPriority') {
+        cells = generateCellsWithClustering(pixels, palette, labCache)
+        cells = cleanupIsolatedPixels(cells, w, h, palette)
+      } else {
+        const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+        cells = pixels.map((px, idx) => {
+          const col = idx % w
+          const row = Math.floor(idx / w)
+          if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
+          const key = `${px.r},${px.g},${px.b}`
+          if (!pixelColorCache.has(key)) {
+            pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+          }
+          const color = pixelColorCache.get(key)!
+          return { row, col, isTransparent: false, color }
+        })
+
+        if (mergeThreshold > 0) {
+          cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+        }
       }
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length
@@ -342,21 +330,26 @@ function App() {
     const labCache = buildLabCache(palette)
     const transparentCount = pixels.filter(px => px.isTransparent).length
 
-    // Match each pixel RGB directly to nearest brand color (no quantization)
-    const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
-    let cells = pixels.map(px => {
-      if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-      const key = `${px.r},${px.g},${px.b}`
-      if (!pixelColorCache.has(key)) {
-        pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
-      }
-      const color = pixelColorCache.get(key)!
-      return { row: px.y, col: px.x, isTransparent: false, color }
-    })
+    let cells: PatternCell[]
 
-    // Only apply color merging in standard mode, not in originalColorPriority
-    if (colorMatchMode === 'standard' && mergeThreshold > 0) {
-      cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+    if (colorMatchMode === 'originalColorPriority') {
+      cells = generateCellsWithClustering(pixels, palette, labCache)
+      cells = cleanupIsolatedPixels(cells, w, h, palette)
+    } else {
+      const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+      cells = pixels.map(px => {
+        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+        const key = `${px.r},${px.g},${px.b}`
+        if (!pixelColorCache.has(key)) {
+          pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+        }
+        const color = pixelColorCache.get(key)!
+        return { row: px.y, col: px.x, isTransparent: false, color }
+      })
+
+      if (mergeThreshold > 0) {
+        cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+      }
     }
     const colorStats = computeColorStats(cells)
     const beadCount = cells.filter(c => !c.isTransparent).length
@@ -369,6 +362,87 @@ function App() {
       transparentCount,
       ...(prev ? {} : {}),
     }))
+  }
+
+  function generateCellsWithClustering(pixels: PixelCell[], palette: PaletteColor[], labCache: Map<string, [number, number, number]>): PatternCell[] {
+    const nonTransparent = pixels.filter(px => !px.isTransparent)
+    const uniqueRgbs = Array.from(new Set(
+      nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
+    )).map(key => {
+      const [r, g, b] = key.split(',').map(Number) as [number, number, number]
+      return [r, g, b] as [number, number, number]
+    })
+
+    const clusterK = Math.min(12, Math.max(4, Math.ceil(uniqueRgbs.length / 8)))
+    const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
+
+    const centerToBrand = new Map<number, PaletteColor>()
+    for (let i = 0; i < centers.length; i++) {
+      const [r, g, b] = centers[i]
+      centerToBrand.set(i, matchColor(r, g, b, palette, labCache))
+    }
+
+    const rgbToCluster = new Map<string, number>()
+    for (let i = 0; i < uniqueRgbs.length; i++) {
+      const [r, g, b] = uniqueRgbs[i]
+      rgbToCluster.set(`${r},${g},${b}`, assignments[i])
+    }
+
+    return pixels.map(px => {
+      if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+      const key = `${px.r},${px.g},${px.b}`
+      const clusterIdx = rgbToCluster.get(key) || 0
+      const color = centerToBrand.get(clusterIdx) || palette[0]
+      return { row: px.y, col: px.x, isTransparent: false, color }
+    })
+  }
+
+  function cleanupIsolatedPixels(cells: PatternCell[], w: number, h: number, palette: PaletteColor[]): PatternCell[] {
+    return cells.map((cell, idx) => {
+      if (cell.isTransparent) return cell
+      if (isKeyFacialColor(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])) return cell
+
+      const row = Math.floor(idx / w)
+      const col = idx % w
+
+      // Check 8 neighbors
+      const neighbors: PatternCell[] = []
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue
+          const nr = row + dy, nc = col + dx
+          if (nr < 0 || nr >= h || nc < 0 || nc >= w) continue
+          const nidx = nr * w + nc
+          const ncell = cells[nidx]
+          if (!ncell.isTransparent) neighbors.push(ncell)
+        }
+      }
+
+      if (neighbors.length === 0) return cell
+
+      // Count neighbor colors
+      const colorCounts = new Map<string, number>()
+      for (const n of neighbors) {
+        const key = `${n.color.brand}__${n.color.code}`
+        colorCounts.set(key, (colorCounts.get(key) || 0) + 1)
+      }
+
+      // If dominated by one color (5+ of 8), replace this pixel
+      let maxCount = 0, dominantColor: PaletteColor | null = null
+      for (const [key, count] of colorCounts) {
+        if (count > maxCount) {
+          maxCount = count
+          const [brand, code] = key.split('__')
+          dominantColor = palette.find(c => c.brand === brand && c.code === code) || null
+        }
+      }
+
+      if (maxCount >= 5 && dominantColor) {
+        return { ...cell, color: dominantColor }
+      }
+
+      return cell
+    })
   }
 
   function calcSizeByRatio(longSide: number): { width: number; height: number } {
@@ -922,6 +996,30 @@ function App() {
         {/* ── Right sidebar ───────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
           <PalettePanel selectedBrand={brand} onBrandChange={handleBrandChange} />
+
+          {/* Sampling mode selection */}
+          <div className="mt-6 mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">采样方式</p>
+            <div className="flex gap-2">
+              {(['average', 'center'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSamplingMode(mode)}
+                  className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+                    samplingMode === mode
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  {mode === 'average' && '平均采样'}
+                  {mode === 'center' && '中心采样'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+              {samplingMode === 'average' ? '适合普通照片' : '适合像素图/拼豆实物图'}
+            </p>
+          </div>
 
           {/* Color match mode selection */}
           <div className="mt-6 mb-4">
