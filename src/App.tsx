@@ -213,7 +213,7 @@ function App() {
 
       if (colorMatchMode === 'originalColorPriority') {
         // Original color priority: cluster first, then match to brand colors
-        cells = generateCellsWithClustering(pixels, palette, labCache)
+        cells = generateCellsWithClustering(pixels, palette, labCache, maxColors)
         // Isolated pixel cleanup: replace lonely pixels with surrounding color
         cells = cleanupIsolatedPixels(cells, width, height, palette)
       } else {
@@ -290,7 +290,7 @@ function App() {
       let cells: PatternCell[] = []
 
       if (colorMatchMode === 'originalColorPriority') {
-        cells = generateCellsWithClustering(pixels, palette, labCache)
+        cells = generateCellsWithClustering(pixels, palette, labCache, maxColors)
         cells = cleanupIsolatedPixels(cells, w, h, palette)
       } else {
         const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
@@ -333,7 +333,7 @@ function App() {
     let cells: PatternCell[]
 
     if (colorMatchMode === 'originalColorPriority') {
-      cells = generateCellsWithClustering(pixels, palette, labCache)
+      cells = generateCellsWithClustering(pixels, palette, labCache, maxColors)
       cells = cleanupIsolatedPixels(cells, w, h, palette)
     } else {
       const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
@@ -364,7 +364,7 @@ function App() {
     }))
   }
 
-  function generateCellsWithClustering(pixels: PixelCell[], palette: PaletteColor[], labCache: Map<string, [number, number, number]>): PatternCell[] {
+  function generateCellsWithClustering(pixels: PixelCell[], palette: PaletteColor[], labCache: Map<string, [number, number, number]>, targetMaxColors: number): PatternCell[] {
     const nonTransparent = pixels.filter(px => !px.isTransparent)
     const uniqueRgbs = Array.from(new Set(
       nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
@@ -373,7 +373,8 @@ function App() {
       return [r, g, b] as [number, number, number]
     })
 
-    const clusterK = Math.min(12, Math.max(4, Math.ceil(uniqueRgbs.length / 8)))
+    // Use maxColors as target, with sensible bounds
+    const clusterK = Math.min(targetMaxColors, Math.max(2, Math.min(uniqueRgbs.length, palette.length)))
     const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
 
     const centerToBrand = new Map<number, PaletteColor>()
