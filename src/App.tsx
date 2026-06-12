@@ -116,7 +116,14 @@ function App() {
     // Capture original image dimensions for aspect ratio mode
     const img = new Image()
     img.onload = () => {
-      setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight })
+      const dims = { width: img.naturalWidth, height: img.naturalHeight }
+      setImageDimensions(dims)
+      // If in originalRatio mode, auto-recalculate dimensions
+      if (sizeMode === 'originalRatio') {
+        const newSize = calcSizeByRatio(ratioLongSide)
+        setWidth(newSize.width)
+        setHeight(newSize.height)
+      }
     }
     img.src = url
   }
@@ -128,6 +135,20 @@ function App() {
     setPatternData(null)
     setEditMode(false)
     setCellHistory(null)
+
+    // Update dimensions from cropped image
+    const img = new Image()
+    img.onload = () => {
+      const dims = { width: img.naturalWidth, height: img.naturalHeight }
+      setImageDimensions(dims)
+      // If in originalRatio mode, recalculate with new dimensions
+      if (sizeMode === 'originalRatio') {
+        const newSize = calcSizeByRatio(ratioLongSide)
+        setWidth(newSize.width)
+        setHeight(newSize.height)
+      }
+    }
+    img.src = croppedUrl
   }
 
   function handleCropSkip() {
@@ -319,6 +340,16 @@ function App() {
         width: Math.max(1, Math.round(longSide * ratio)),
         height: longSide
       }
+    }
+  }
+
+  function handleSizeModeChange(mode: 'preset' | 'custom' | 'originalRatio') {
+    setSizeMode(mode)
+    // When switching to originalRatio, immediately recalculate dimensions
+    if (mode === 'originalRatio' && imageDimensions) {
+      const newSize = calcSizeByRatio(ratioLongSide)
+      setWidth(newSize.width)
+      setHeight(newSize.height)
     }
   }
 
@@ -752,7 +783,7 @@ function App() {
                 workTitle={workTitle}
                 onWorkTitleChange={setWorkTitle}
                 sizeMode={sizeMode}
-                onSizeModeChange={setSizeMode}
+                onSizeModeChange={handleSizeModeChange}
                 ratioLongSide={ratioLongSide}
                 onRatioLongSideChange={setRatioLongSide}
                 calcSizeByRatio={calcSizeByRatio}
