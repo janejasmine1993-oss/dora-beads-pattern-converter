@@ -3,7 +3,101 @@
 **检查日期**：2026-06-12  
 **当前版本**：v0.9.0-lite-prod  
 **部署平台**：Cloudflare Pages（纯前端静态）  
-**PostgreSQL 依赖状态**：✅ **无依赖 - 可安全停用**
+**数据库实例**：postgres-9pjc6krw (pindou-db)  
+**数据库名**：dora_dev  
+**PostgreSQL 依赖状态**：✅ **无依赖 - 可安全停用**  
+**备份状态**：✅ **已完成本地备份**
+
+---
+
+## 🔍 停用前检查结果（已完成）
+
+### 数据库连接验证
+
+✅ **连接成功**
+```
+数据库：dora_dev
+用户：jasmine
+连接时间：2026-06-12 10:50:26 GMT+8
+```
+
+### 数据库内容统计
+
+| 表名 | 字段数 | 行数 | 说明 |
+|------|--------|------|------|
+| _prisma_migrations | 8 | 2 | Prisma 迁移记录 |
+| users | 10 | 22 | 用户账户（全为测试用户） |
+| memberships | 8 | 22 | 会员等级 |
+| works | 17 | 6 | 用户作品（全为草稿） |
+| ai_credits | 8 | 22 | AI 配额统计 |
+| ai_jobs | 12 | 7 | AI 任务记录 |
+| uploaded_images | 10 | 10 | 上传图片元数据 |
+
+**总计**：7 张表，89 行数据
+
+### 数据性质分析
+
+✅ **全部为测试数据**
+- 用户：22 个测试用户（全部 example.com 邮箱）
+- 用户昵称包含"测试"、"Test"、"E2E"、"浏览器测试"等标记
+- 无任何真实用户信息（无 @gmail.com、@qq.com 等真实邮箱）
+- 创建日期：2026-06-07 至 2026-06-09（最近 3 天）
+
+✅ **无敏感数据**
+- 无真实邮箱
+- 无付款信息
+- 无个人隐私数据
+- 无企业数据
+
+### 本地备份文件
+
+✅ **已生成完整备份**
+
+保存位置：`backups/postgresql/2026-06-12-before-destroy/`
+
+| 文件 | 大小 | 说明 |
+|------|------|------|
+| dora-beads-postgres-schema.sql | 8.2K | 表结构定义（326 行） |
+| dora-beads-postgres-data.dump | 21K | 完整数据备份 |
+| database-inventory.md | 8.6K | 详细库存清单 |
+| README-restore.md | 7.7K | 恢复说明文档 |
+| table-counts.txt | 485B | 行数统计 |
+
+**总大小**：~60K
+
+---
+
+## ✅ Lite 版不依赖 PostgreSQL 验证
+
+### 前端代码检查
+
+✅ **前端无数据库依赖**
+- DATABASE_URL 引用：仅在 server/ 后端代码中（不在前端代码中）
+- /api/ 调用：17 处，全部被 LITE_MODE_CONFIG 条件隐藏
+- 认证功能：通过 enableAuth = false 隐藏
+- 本地存储：所有数据存储在 localStorage（浏览器）
+
+### 环境变量检查
+
+✅ **.env.production 配置验证**
+```
+VITE_LITE_MODE=true          ✅ Lite 模式已启用
+VITE_API_BASE_URL=/api       ⚠️ 不被使用（功能被隐藏）
+VITE_AUTH_MODE=real          ⚠️ 不被使用（认证被隐藏）
+VITE_AI_RUNTIME_MODE=mock    ✅ Mock 模式（不需要数据库）
+VITE_AI_PROVIDER=mock        ✅ Mock 模式（不需要数据库）
+```
+
+### 构建产物检查
+
+✅ **dist/ 无数据库依赖**
+- dist/ 中无 DATABASE_URL 引用
+- dist/ 中无后端服务代码
+- 所有网络请求仅为静态文件加载
+
+---
+
+## 📋 停用前检查完全清单
 
 ---
 

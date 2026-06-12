@@ -2,6 +2,32 @@
 
 ## v0.9.0-lite-prod - 2026-06-12 (当前生产环境)
 
+### 💾 PostgreSQL 停用前检查 - 完成
+
+**状态**：✅ **已完成停用前检查和备份**  
+**检查日期**：2026-06-12  
+**数据库连接**：✅ 成功（dora_dev）  
+**备份生成**：✅ 完成  
+
+**检查结果**：
+- ✅ 数据库包含 7 张表，89 行数据
+- ✅ 全部为测试数据（无真实用户信息）
+- ✅ 当前 v0.9.0-lite-prod 完全不使用数据库
+- ✅ Cloudflare Pages 前端无任何 API 调用
+- ✅ 停用 PostgreSQL 对线上版本无影响
+
+**备份文件**：
+- Schema only: dora-beads-postgres-schema.sql (326 行)
+- 完整数据: dora-beads-postgres-data.dump (21K)
+- 库存清单: database-inventory.md
+- 恢复说明: README-restore.md
+- 保存位置: backups/postgresql/2026-06-12-before-destroy/
+
+**后续状态**：
+- CloudBase 后端服务进入暂停维护状态
+- PostgreSQL 实例可停用或删除（备份已保存）
+- 若需恢复完整版本，按恢复说明操作即可
+
 ### 💰 PostgreSQL 停用决策
 
 **状态**：✅ **已验证可安全停用**  
