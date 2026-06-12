@@ -32,6 +32,7 @@ import { extractPixels } from './lib/image/pixelate'
 import { samplePixelGrid } from './lib/image/samplePixelGrid'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { mergeLowUsageColors } from './lib/image/mergeColors'
+import { clusterColors, isKeyFacialColor } from './lib/image/clustering'
 import { computeColorStats } from './lib/utils/stats'
 import { getPalette } from './data/palettes'
 import { transformImage, type ImageTransformOp } from './lib/image/transform'
@@ -66,6 +67,7 @@ function App() {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
   const [brand, setBrand] = useState<BrandName>('MARD')
   const [colorMatchMode, setColorMatchMode] = useState<'standard' | 'originalColorPriority'>('standard')
+  const samplingMode = 'average' // 默认使用高质量采样
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
@@ -188,7 +190,7 @@ function App() {
     try {
       const img = await loadImage(url)
       const cropped = cropTransparentBorder(img)
-      const canvas = resizeWithContain(cropped, width, height)
+      const canvas = resizeWithContain(cropped, width, height, samplingMode)
       const pixels = extractPixels(canvas)
       setRawPixels(pixels)
       const palette = getPalette(brand)
@@ -196,21 +198,64 @@ function App() {
       const nonTransparent = pixels.filter(px => !px.isTransparent)
       const transparentCount = pixels.length - nonTransparent.length
 
-      // Match each pixel RGB directly to nearest brand color (no quantization)
-      const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
-      let cells = pixels.map(px => {
-        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-        const key = `${px.r},${px.g},${px.b}`
-        if (!pixelColorCache.has(key)) {
-          pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
-        }
-        const color = pixelColorCache.get(key)!
-        return { row: px.y, col: px.x, isTransparent: false, color }
-      })
+      let cells: PatternCell[] = []
 
-      // Only apply color merging in standard mode, not in originalColorPriority
-      if (colorMatchMode === 'standard' && mergeThreshold > 0) {
-        cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+      if (colorMatchMode === 'originalColorPriority') {
+        // Original color priority: cluster first, then match to brand colors
+        const uniqueRgbs = Array.from(new Set(
+          nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
+        )).map(key => {
+          const [r, g, b] = key.split(',').map(Number) as [number, number, number]
+          return [r, g, b] as [number, number, number]
+        })
+
+        const clusterK = Math.min(12, Math.max(4, Math.ceil(uniqueRgbs.length / 8)))
+        const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
+
+        // Map cluster centers to brand colors
+        const centerToBrand = new Map<number, PaletteColor>()
+        for (let i = 0; i < centers.length; i++) {
+          const [r, g, b] = centers[i]
+          centerToBrand.set(i, matchColor(r, g, b, palette, labCache))
+        }
+
+        // Map pixels to clusters
+        const rgbToCluster = new Map<string, number>()
+        for (let i = 0; i < uniqueRgbs.length; i++) {
+          const [r, g, b] = uniqueRgbs[i]
+          rgbToCluster.set(`${r},${g},${b}`, assignments[i])
+        }
+
+        cells = pixels.map(px => {
+          if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+          const key = `${px.r},${px.g},${px.b}`
+          const clusterIdx = rgbToCluster.get(key) || 0
+          const color = centerToBrand.get(clusterIdx) || palette[0]
+          return { row: px.y, col: px.x, isTransparent: false, color }
+        })
+      } else {
+        // Standard mode: independent matching with facial color protection
+        const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+        cells = pixels.map(px => {
+          if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+          const key = `${px.r},${px.g},${px.b}`
+          if (!pixelColorCache.has(key)) {
+            pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+          }
+          const color = pixelColorCache.get(key)!
+          return { row: px.y, col: px.x, isTransparent: false, color }
+        })
+
+        if (mergeThreshold > 0) {
+          // Enhanced merging with facial color protection
+          cells = cells.map(cell => {
+            if (cell.isTransparent || !isKeyFacialColor(cell.color.rgb[0], cell.color.rgb[1], cell.color.rgb[2])) {
+              return cell
+            }
+            return cell
+          })
+          cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+        }
       }
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length

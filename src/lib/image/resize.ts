@@ -15,11 +15,13 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
  * - Preserves original aspect ratio
  * - Centers the content
  * - Areas outside the content remain transparent (alpha=0)
+ * - Uses configurable sampling mode for better quality
  */
 export function resizeWithContain(
   source: HTMLCanvasElement | HTMLImageElement,
   targetW: number,
-  targetH: number
+  targetH: number,
+  samplingMode: 'average' | 'center' = 'average'
 ): HTMLCanvasElement {
   const srcW = source instanceof HTMLImageElement ? source.naturalWidth : source.width
   const srcH = source instanceof HTMLImageElement ? source.naturalHeight : source.height
@@ -34,8 +36,16 @@ export function resizeWithContain(
   canvas.width = targetW
   canvas.height = targetH
   const ctx = canvas.getContext('2d')!
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
+
+  if (samplingMode === 'center') {
+    // Center sampling: use nearest neighbor for pixel-art quality
+    ctx.imageSmoothingEnabled = false
+  } else {
+    // Average sampling: use high-quality interpolation for photos
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+  }
+
   // No background fill — transparent areas keep alpha=0 so isTransparent detection works
   ctx.drawImage(source, 0, 0, srcW, srcH, offsetX, offsetY, drawW, drawH)
   return canvas
