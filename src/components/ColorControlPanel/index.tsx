@@ -57,6 +57,11 @@ export function ColorControlPanel({
         <span className="text-xs text-gray-500">色</span>
       </div>
 
+      {/* Note about color count and detail */}
+      <p className="text-xs text-gray-500 bg-gray-50 rounded p-2 mb-3 leading-relaxed border border-gray-200">
+        💡 颜色数量控制色彩层次，不等于图纸清晰度。人物五官不清晰时，建议提高图纸尺寸或使用人像增强功能。
+      </p>
+
       {/* Merge threshold */}
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">少量色合并</p>
       <div className="grid grid-cols-4 gap-1">

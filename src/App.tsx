@@ -68,6 +68,7 @@ function App() {
   const [brand, setBrand] = useState<BrandName>('MARD')
   const [colorMatchMode, setColorMatchMode] = useState<'standard' | 'originalColorPriority'>('standard')
   const [samplingMode, setSamplingMode] = useState<SamplingMode>('average')
+  const [portraitEnhance, setPortraitEnhance] = useState(false)
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
@@ -192,8 +193,11 @@ function App() {
       const cropped = cropTransparentBorder(img)
       const canvas = resizeWithContain(cropped, width, height)
 
+      // Apply portrait detail enhancement if enabled
+      const enhancedCanvas = applyPortraitEnhance(canvas)
+
       // Use true sampling instead of extracting from smoothed canvas
-      const sampledPixels = applySampling(canvas, width, height, samplingMode)
+      const sampledPixels = applySampling(enhancedCanvas, width, height, samplingMode)
 
       // Convert sampled pixels to PixelCell format
       const pixels: PixelCell[] = sampledPixels.map((px, idx) => {
@@ -396,6 +400,55 @@ function App() {
       const color = centerToBrand.get(clusterIdx) || palette[0]
       return { row: px.y, col: px.x, isTransparent: false, color }
     })
+  }
+
+  function applyPortraitEnhance(canvas: HTMLCanvasElement): HTMLCanvasElement {
+    if (!portraitEnhance) return canvas
+
+    const w = canvas.width, h = canvas.height
+    const ctx = canvas.getContext('2d')!
+    const imageData = ctx.getImageData(0, 0, w, h)
+    const data = imageData.data
+
+    // Light sharpening + contrast enhancement
+    const tempData = new Uint8ClampedArray(data)
+    const sharpKernel = [-1, -1, -1, -1, 9, -1, -1, -1, -1]
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4
+
+        // Apply light sharpening
+        let r = 0, g = 0, b = 0
+        for (let ky = 0; ky < 3; ky++) {
+          for (let kx = 0; kx < 3; kx++) {
+            const nidx = ((y - 1 + ky) * w + (x - 1 + kx)) * 4
+            const weight = sharpKernel[ky * 3 + kx]
+            r += tempData[nidx] * weight
+            g += tempData[nidx + 1] * weight
+            b += tempData[nidx + 2] * weight
+          }
+        }
+
+        // Light boost (0.3 intensity to avoid over-sharpening)
+        const boost = 0.3
+        data[idx] = Math.max(0, Math.min(255, tempData[idx] + (r - tempData[idx]) * boost))
+        data[idx + 1] = Math.max(0, Math.min(255, tempData[idx + 1] + (g - tempData[idx + 1]) * boost))
+        data[idx + 2] = Math.max(0, Math.min(255, tempData[idx + 2] + (b - tempData[idx + 2]) * boost))
+      }
+    }
+
+    // Light contrast boost
+    const contrastFactor = 1.15
+    const contrastCenter = 128
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.max(0, Math.min(255, contrastCenter + (data[i] - contrastCenter) * contrastFactor))
+      data[i + 1] = Math.max(0, Math.min(255, contrastCenter + (data[i + 1] - contrastCenter) * contrastFactor))
+      data[i + 2] = Math.max(0, Math.min(255, contrastCenter + (data[i + 2] - contrastCenter) * contrastFactor))
+    }
+
+    ctx.putImageData(imageData, 0, 0)
+    return canvas
   }
 
   function cleanupIsolatedPixels(cells: PatternCell[], w: number, h: number, palette: PaletteColor[]): PatternCell[] {
@@ -1019,6 +1072,24 @@ function App() {
             </div>
             <p className="text-xs text-gray-600 mt-2 leading-relaxed">
               {samplingMode === 'average' ? '适合普通照片' : '适合像素图/拼豆实物图'}
+            </p>
+          </div>
+
+          {/* Portrait detail enhancement */}
+          <div className="mt-6 mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">人像增强</p>
+            <button
+              onClick={() => setPortraitEnhance(!portraitEnhance)}
+              className={`w-full text-xs py-1.5 rounded border transition-colors ${
+                portraitEnhance
+                  ? 'bg-green-500 text-white border-green-500'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
+              }`}
+            >
+              {portraitEnhance ? '✓ 已启用' : '禁用'}
+            </button>
+            <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+              增强眼睛、眉毛、嘴巴等五官细节
             </p>
           </div>
 
