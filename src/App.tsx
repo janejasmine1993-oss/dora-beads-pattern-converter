@@ -66,6 +66,7 @@ function App() {
   const [ratioLongSide, setRatioLongSide] = useState(104)
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
   const [brand, setBrand] = useState<BrandName>('MARD')
+  const [colorMatchMode, setColorMatchMode] = useState<'standard' | 'originalColorPriority'>('standard')
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
@@ -195,20 +196,39 @@ function App() {
       const labCache = buildLabCache(palette)
       const nonTransparent = pixels.filter(px => !px.isTransparent)
       const transparentCount = pixels.length - nonTransparent.length
-      const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
-      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
-      const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
-      for (const c of clusters) {
-        const key = c.join(',')
-        if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+
+      let cells: PatternCell[] = []
+
+      if (colorMatchMode === 'originalColorPriority') {
+        // Original color priority: directly match each pixel to nearest brand color
+        const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+        cells = pixels.map(px => {
+          if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+          const key = `${px.r},${px.g},${px.b}`
+          if (!pixelColorCache.has(key)) {
+            pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+          }
+          const color = pixelColorCache.get(key)!
+          return { row: px.y, col: px.x, isTransparent: false, color }
+        })
+      } else {
+        // Standard mode: quantize colors first, then match
+        const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
+        const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+        const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+        for (const c of clusters) {
+          const key = c.join(',')
+          if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+        }
+        let ntIdx = 0
+        cells = pixels.map(px => {
+          if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+          const cluster = clusters[ntIdx++]
+          const color = clusterCache.get(cluster.join(','))!
+          return { row: px.y, col: px.x, isTransparent: false, color }
+        })
       }
-      let ntIdx = 0
-      let cells: PatternCell[] = pixels.map(px => {
-        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-        const cluster = clusters[ntIdx++]
-        const color = clusterCache.get(cluster.join(','))!
-        return { row: px.y, col: px.x, isTransparent: false, color }
-      })
+
       if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length
@@ -255,26 +275,43 @@ function App() {
       const transparentCount = pixels.length - nonTransparent.length
       const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
 
-      // Use maxColors limit or preserve original colors
-      const colorLimit = params.preserveColorCount ? ntRgb.length : maxColors
-      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, colorLimit) : []
-
-      const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
-      for (const c of clusters) {
-        const key = c.join(',')
-        if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
-      }
-      let ntIdx = 0
       const w = params.gridCols
       const h = params.gridRows
-      let cells: PatternCell[] = pixels.map((px, idx) => {
-        const col = idx % w
-        const row = Math.floor(idx / w)
-        if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
-        const cluster = clusters[ntIdx++]
-        const color = clusterCache.get(cluster.join(','))!
-        return { row, col, isTransparent: false, color }
-      })
+      let cells: PatternCell[] = []
+
+      if (colorMatchMode === 'originalColorPriority') {
+        const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+        cells = pixels.map((px, idx) => {
+          const col = idx % w
+          const row = Math.floor(idx / w)
+          if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
+          const key = `${px.r},${px.g},${px.b}`
+          if (!pixelColorCache.has(key)) {
+            pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+          }
+          const color = pixelColorCache.get(key)!
+          return { row, col, isTransparent: false, color }
+        })
+      } else {
+        // Use maxColors limit or preserve original colors
+        const colorLimit = params.preserveColorCount ? ntRgb.length : maxColors
+        const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, colorLimit) : []
+
+        const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+        for (const c of clusters) {
+          const key = c.join(',')
+          if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+        }
+        let ntIdx = 0
+        cells = pixels.map((px, idx) => {
+          const col = idx % w
+          const row = Math.floor(idx / w)
+          if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
+          const cluster = clusters[ntIdx++]
+          const color = clusterCache.get(cluster.join(','))!
+          return { row, col, isTransparent: false, color }
+        })
+      }
       if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
       const colorStats = computeColorStats(cells)
       const beadCount = cells.filter(c => !c.isTransparent).length
@@ -297,19 +334,36 @@ function App() {
     const nonTransparent = pixels.filter(px => !px.isTransparent)
     const transparentCount = pixels.length - nonTransparent.length
     const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
-    const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
-    const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
-    for (const c of clusters) {
-      const key = c.join(',')
-      if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+
+    let cells: PatternCell[] = []
+
+    if (colorMatchMode === 'originalColorPriority') {
+      const pixelColorCache = new Map<string, ReturnType<typeof matchColor>>()
+      cells = pixels.map(px => {
+        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+        const key = `${px.r},${px.g},${px.b}`
+        if (!pixelColorCache.has(key)) {
+          pixelColorCache.set(key, matchColor(px.r, px.g, px.b, palette, labCache))
+        }
+        const color = pixelColorCache.get(key)!
+        return { row: px.y, col: px.x, isTransparent: false, color }
+      })
+    } else {
+      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, maxColors) : []
+      const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+      for (const c of clusters) {
+        const key = c.join(',')
+        if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+      }
+      let ntIdx = 0
+      cells = pixels.map(px => {
+        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+        const cluster = clusters[ntIdx++]
+        const color = clusterCache.get(cluster.join(','))!
+        return { row: px.y, col: px.x, isTransparent: false, color }
+      })
     }
-    let ntIdx = 0
-    let cells: PatternCell[] = pixels.map(px => {
-      if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
-      const cluster = clusters[ntIdx++]
-      const color = clusterCache.get(cluster.join(','))!
-      return { row: px.y, col: px.x, isTransparent: false, color }
-    })
+
     if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
     const colorStats = computeColorStats(cells)
     const beadCount = cells.filter(c => !c.isTransparent).length
@@ -869,6 +923,32 @@ function App() {
         {/* ── Right sidebar ───────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
           <PalettePanel selectedBrand={brand} onBrandChange={handleBrandChange} />
+
+          {/* Color match mode selection */}
+          <div className="mt-6 mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">色彩匹配模式</p>
+            <div className="flex gap-2">
+              {(['standard', 'originalColorPriority'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setColorMatchMode(mode)}
+                  className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+                    colorMatchMode === mode
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  {mode === 'standard' && '标准品牌匹配'}
+                  {mode === 'originalColorPriority' && '原图色彩优先'}
+                </button>
+              ))}
+            </div>
+            {colorMatchMode === 'originalColorPriority' && (
+              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                原图色彩优先会尽量保留原图色彩观感，但最终仍会匹配到当前品牌色号。
+              </p>
+            )}
+          </div>
 
           {/* Quick palette — only in edit mode */}
           {editMode && (
