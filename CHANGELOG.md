@@ -2,17 +2,38 @@
 
 ## v0.9.0-lite - 2026-06-11 ~ 2026-06-12
 
-### 🚀 部署信息
+### 🚀 生产部署信息
 
-**版本标签**：`v0.9.0-lite`  
-**部署日期**：2026-06-11（CloudBase）/ 2026-06-12（Cloudflare Pages）  
-**主线部署平台**：Cloudflare Pages（推荐，已验证成功）  
-**主线公网访问**：https://dora-beads-pattern-converter-git.pages.dev  
-**主线部署状态**：✅ 已部署到生产环境
+**版本标签**：`v0.9.0-lite`、`v0.9.0-lite-prod`  
+**部署日期**：2026-06-11（初始）/ 2026-06-12（Cloudflare Pages 验证）  
+**生产验证**：✅ **2026-06-12 已验证通过**
 
-**备选部署平台**：腾讯云 CloudBase（HTTP 418 未解决，暂停排查）  
-**备选公网访问**：https://dora-beads-prod-d3fnxast620bb482-1440665484.tcloudbaseapp.com  
-**备选部署状态**：⚠️ 文件已部署，HTTP 访问服务路由配置问题未解决
+#### 正式生产部署
+**部署平台**：Cloudflare Pages（GitHub 自动部署）  
+**部署分支**：main（commit 6436737）  
+**生产地址**：https://dora-beads-pattern-converter-git.pages.dev  
+**部署状态**：✅ **正式上线生产环境**  
+
+**生产验证清单**：
+- ✅ 首页显示"Lite 会员体验版"标签（粉红色）
+- ✅ 会员口令输入框正常显示
+- ✅ 输入 member2024 可进入应用
+- ✅ 用户中心功能隐藏：登录、会员、兑换码已隐藏
+- ✅ 核心功能可用：上传、生成、导出、本地保存正常
+- ✅ localStorage 作品持久化正常
+- ✅ 跨浏览器兼容性验证通过
+- ✅ 全球 CDN 分发正常
+
+#### 备选部署平台（已尝试，暂停）
+**部署平台**：腾讯云 CloudBase（暂停）  
+**部署地址**：https://dora-beads-prod-d3fnxast620bb482-1440665484.tcloudbaseapp.com  
+**部署状态**：⚠️ **HTTP 418 路由问题，暂停排查**  
+**备注**：所有文件已成功上传，问题在 HTTP 访问服务层，需 CloudBase 技术支持
+
+#### 分支合并信息
+**合并操作**：2026-06-12 将 rebuild-v0.6-from-v0.4.3 合并到 main  
+**合并 commit**：6436737（chore: merge v0.9.0-lite development into main）  
+**冲突解决**：vite.config.ts（合并 CloudBase 和 Cloudflare Pages 配置）
 
 **版本类型**：**无数据库安全版本 - 可安全回滚**
 - ❌ 无后端依赖（server/ 代码完整保留，未部署）

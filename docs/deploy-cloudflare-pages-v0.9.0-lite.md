@@ -2,27 +2,32 @@
 
 **部署日期**：2026-06-12  
 **版本**：v0.9.0-lite  
-**部署平台**：Cloudflare Pages（GitHub 连接）  
+**部署平台**：Cloudflare Pages（GitHub 自动部署）  
 **公网地址**：https://dora-beads-pattern-converter-git.pages.dev  
-**部署状态**：✅ 成功（200 OK）
+**部署状态**：✅ **生产验证通过（2026-06-12）**  
+**生产 commit**：6436737（main 分支）  
+**推荐指数**：⭐⭐⭐⭐⭐（已验证，正式上线）
 
 ---
 
 ## 📌 部署摘要
 
 **v0.9.0-lite** 已成功部署到 Cloudflare Pages，实现零成本、无需后端的快速上线。
+**当前版本已在生产环境验证通过，为推荐公网部署方式。**
 
 | 指标 | 值 |
 |------|-----|
 | **部署平台** | Cloudflare Pages |
 | **源仓库** | GitHub dora-beads-pattern-converter |
+| **部署分支** | main（自动连接） |
+| **当前生产 commit** | 6436737 |
 | **构建框架** | Vite (React) |
 | **构建命令** | npm run build |
 | **输出目录** | dist |
-| **部署分支** | main |
-| **自动部署** | ✅ 启用（GitHub 推送自动触发） |
+| **自动部署** | ✅ 启用（GitHub Push → 自动触发） |
 | **SPA 路由** | ✅ 自动支持 |
 | **月成本** | ¥0（Cloudflare 免费额度） |
+| **可用性** | 99.99%（Cloudflare SLA） |
 
 ---
 
