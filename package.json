@@ -1,7 +1,7 @@
 {
   "name": "dora-beads-pattern-converter",
   "private": true,
-  "version": "0.9.0-lite",
+  "version": "0.9.1-lite-ratio-color-priority",
   "type": "module",
   "scripts": {
     "dev": "vite",
