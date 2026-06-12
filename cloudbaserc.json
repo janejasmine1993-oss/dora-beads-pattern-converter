@@ -1,0 +1,9 @@
+{
+  "envId": "dora-beads-prod-d3fnxast620bb482",
+  "projectPath": ".",
+  "hosting": {
+    "publicPath": "dist",
+    "disableFunctionalDomain": false
+  },
+  "version": "2.0"
+}

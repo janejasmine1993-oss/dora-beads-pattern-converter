@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 verify_*.mjs
 playwright
+.env.local

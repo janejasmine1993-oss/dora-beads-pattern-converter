@@ -31,7 +31,8 @@ export function drawPixelTab(
   width: number,
   height: number,
   cellSize: number,
-  mirror = false
+  mirror = false,
+  showWatermark = true
 ): void {
   fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
   ctx.imageSmoothingEnabled = false
@@ -41,6 +42,7 @@ export function drawPixelTab(
     ctx.fillStyle = px.hex
     ctx.fillRect(drawX * cellSize, px.y * cellSize, cellSize, cellSize)
   }
+  drawWatermark(ctx, width * cellSize, height * cellSize, showWatermark)
 }
 
 export function drawGridTab(
@@ -49,7 +51,8 @@ export function drawGridTab(
   width: number,
   height: number,
   cellSize: number,
-  mirror = false
+  mirror = false,
+  showWatermark = true
 ): void {
   fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
 
@@ -74,6 +77,7 @@ export function drawGridTab(
     ctx.lineTo(width * cellSize, y * cellSize)
     ctx.stroke()
   }
+  drawWatermark(ctx, width * cellSize, height * cellSize, showWatermark)
 }
 
 export function drawColorCodeTab(
@@ -83,9 +87,10 @@ export function drawColorCodeTab(
   width: number,
   height: number,
   cellSize: number,
-  mirror = false
+  mirror = false,
+  showWatermark = true
 ): void {
-  drawGridTab(ctx, cells, width, height, cellSize, mirror)
+  drawGridTab(ctx, cells, width, height, cellSize, mirror, false)
 
   if (cellSize < 10) return
 
@@ -108,13 +113,13 @@ export function drawColorCodeTab(
       cell.row * cellSize + cellSize / 2
     )
   }
+  drawWatermark(ctx, width * cellSize, height * cellSize, showWatermark)
 }
 
 export function drawStatsTab(
   ctx: CanvasRenderingContext2D,
   colorStats: ColorStat[],
-  canvasWidth: number,
-  _canvasHeight: number
+  canvasWidth: number
 ): void {
   if (colorStats.length === 0) return
 
@@ -162,4 +167,33 @@ export function drawStatsTab(
   }
 }
 
-export { TRANSPARENT_BG }
+function drawWatermark(
+  ctx: CanvasRenderingContext2D,
+  canvasW: number,
+  canvasH: number,
+  showWatermark: boolean = true
+): void {
+  if (!showWatermark) return
+
+  const text = '哆啦拼豆图纸'
+  const fontSize = Math.max(24, Math.floor(canvasW / 8))
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  // 使用酒红色 #8A1538，透明度 0.48（与导出标尺刻度线接近）
+  ctx.fillStyle = 'rgba(138, 21, 56, 0.48)'
+  ctx.globalAlpha = 0.48
+  ctx.rotate((-20 * Math.PI) / 180)
+
+  const spacing = canvasH / 2.5
+  for (let x = -canvasW; x < canvasW * 2; x += canvasW / 1.8) {
+    for (let y = -canvasH; y < canvasH * 2; y += spacing) {
+      ctx.fillText(text, x, y)
+    }
+  }
+
+  ctx.rotate((20 * Math.PI) / 180)
+  ctx.globalAlpha = 1
+}
+
+export { TRANSPARENT_BG, drawWatermark }

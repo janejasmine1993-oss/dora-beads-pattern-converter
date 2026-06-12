@@ -32,7 +32,7 @@ export function CropModal({ imageUrl, onConfirm, onSkip }: CropModalProps) {
   const [ratio, setRatio] = useState<number | null>(null)  // pixel w/h ratio, null = free
 
   const drag = useRef<{
-    type: 'move' | 'br'
+    type: 'move' | 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'
     sx: number; sy: number
     cx: number; cy: number; cw: number; ch: number
   } | null>(null)
@@ -90,7 +90,7 @@ export function CropModal({ imageUrl, onConfirm, onSkip }: CropModalProps) {
     }
   }, [nat, aspectKey])
 
-  function onMouseDown(e: React.MouseEvent, type: 'move' | 'br') {
+  function onMouseDown(e: React.MouseEvent, type: 'move' | 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r') {
     e.preventDefault()
     e.stopPropagation()
     drag.current = { type, sx: e.clientX, sy: e.clientY, cx: crop.x, cy: crop.y, cw: crop.w, ch: crop.h }
@@ -109,21 +109,88 @@ export function CropModal({ imageUrl, onConfirm, onSkip }: CropModalProps) {
       return
     }
 
-    // Resize (br handle)
-    if (ratio !== null && nat.w > 0) {
-      // Constrained resize: maintain pixel ratio
-      const dr = ratio * nat.h / nat.w  // display w% / h% ratio
-      let nw = clamp(cw + dx, 5, 100 - cx)
-      let nh = nw / dr
-      if (nh > 100 - cy || nh < 5) {
-        nh = clamp(nh, 5, 100 - cy)
-        nw = nh * dr
-        nw = clamp(nw, 5, 100 - cx)
-      }
-      setCrop({ x: cx, y: cy, w: nw, h: nh })
-    } else {
-      setCrop({ x: cx, y: cy, w: clamp(cw + dx, 5, 100 - cx), h: clamp(ch + dy, 5, 100 - cy) })
+    // Handle all resize types
+    const minSize = 5
+    const dr = ratio !== null && nat.w > 0 ? ratio * nat.h / nat.w : null
+
+    let nx = cx, ny = cy, nw = cw, nh = ch
+
+    // Corners and edges
+    if (type === 'tl') {
+      ny = clamp(cy + dy, 0, cy + ch - minSize)
+      nx = clamp(cx + dx, 0, cx + cw - minSize)
+      nw = cw - (nx - cx)
+      nh = ch - (ny - cy)
+    } else if (type === 'tr') {
+      ny = clamp(cy + dy, 0, cy + ch - minSize)
+      nw = clamp(cw + dx, minSize, 100 - nx)
+      nh = ch - (ny - cy)
+    } else if (type === 'bl') {
+      nx = clamp(cx + dx, 0, cx + cw - minSize)
+      nh = clamp(ch + dy, minSize, 100 - ny)
+      nw = cw - (nx - cx)
+    } else if (type === 'br') {
+      nw = clamp(cw + dx, minSize, 100 - nx)
+      nh = clamp(ch + dy, minSize, 100 - ny)
+    } else if (type === 't') {
+      ny = clamp(cy + dy, 0, cy + ch - minSize)
+      nh = ch - (ny - cy)
+    } else if (type === 'b') {
+      nh = clamp(ch + dy, minSize, 100 - ny)
+    } else if (type === 'l') {
+      nx = clamp(cx + dx, 0, cx + cw - minSize)
+      nw = cw - (nx - cx)
+    } else if (type === 'r') {
+      nw = clamp(cw + dx, minSize, 100 - nx)
     }
+
+    // Apply ratio constraint if needed
+    if (dr !== null) {
+      if (type === 'br' || type === 'tl' || type === 'tr' || type === 'bl') {
+        // For corners, maintain aspect ratio
+        const currentDr = nw > 0 ? nh / nw : dr
+        if (Math.abs(currentDr - dr) > 0.01) {
+          if (type === 'br') {
+            const adjH = nw / dr
+            if (ny + adjH <= 100) {
+              nh = adjH
+            } else {
+              nw = (100 - ny) * dr
+            }
+          } else if (type === 'tl') {
+            const adjH = nw / dr
+            if (ny - adjH >= 0) {
+              ny = ny - adjH + nh
+              nh = adjH
+            } else {
+              const adjW = (ny - 0) * dr
+              nw = adjW
+              nx = cx + cw - adjW
+            }
+          } else if (type === 'tr') {
+            const adjH = nw / dr
+            if (ny - adjH >= 0) {
+              ny = ny - adjH + nh
+              nh = adjH
+            } else {
+              const adjW = (ny - 0) * dr
+              nw = adjW
+            }
+          } else if (type === 'bl') {
+            const adjH = nw / dr
+            if (ny + adjH <= 100) {
+              nh = adjH
+            } else {
+              const adjW = (100 - ny) * dr
+              nw = adjW
+              nx = cx + cw - adjW
+            }
+          }
+        }
+      }
+    }
+
+    setCrop({ x: nx, y: ny, w: nw, h: nh })
   }, [ratio, nat])
 
   const onMouseUp = useCallback(() => { drag.current = null }, [])
@@ -214,32 +281,39 @@ export function CropModal({ imageUrl, onConfirm, onSkip }: CropModalProps) {
               onMouseDown={(e) => onMouseDown(e, 'move')}
             >
               {/* Corner handles */}
-              <div className="absolute top-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-nw-resize"
-                style={{ transform: 'translate(-50%,-50%)' }} />
-              <div className="absolute top-0 right-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-ne-resize"
-                style={{ transform: 'translate(50%,-50%)' }} />
-              <div className="absolute bottom-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-sw-resize"
-                style={{ transform: 'translate(-50%,50%)' }} />
+              <div className="absolute top-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-nwse-resize"
+                style={{ transform: 'translate(-50%,-50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'tl')} />
+              <div className="absolute top-0 right-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-nesw-resize"
+                style={{ transform: 'translate(50%,-50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'tr')} />
+              <div className="absolute bottom-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 cursor-nesw-resize"
+                style={{ transform: 'translate(-50%,50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'bl')} />
               <div
-                className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 cursor-se-resize"
+                className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 cursor-nwse-resize"
                 style={{ transform: 'translate(50%,50%)' }}
                 onMouseDown={(e) => onMouseDown(e, 'br')}
               />
               {/* Edge centers */}
-              <div className="absolute top-0 left-1/2 w-2 h-2 bg-white border border-blue-400 cursor-n-resize"
-                style={{ transform: 'translate(-50%,-50%)' }} />
-              <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-white border border-blue-400 cursor-s-resize"
-                style={{ transform: 'translate(-50%,50%)' }} />
-              <div className="absolute left-0 top-1/2 w-2 h-2 bg-white border border-blue-400 cursor-w-resize"
-                style={{ transform: 'translate(-50%,-50%)' }} />
-              <div className="absolute right-0 top-1/2 w-2 h-2 bg-white border border-blue-400 cursor-e-resize"
-                style={{ transform: 'translate(50%,-50%)' }} />
+              <div className="absolute top-0 left-1/2 w-2 h-2 bg-white border border-blue-400 cursor-ns-resize"
+                style={{ transform: 'translate(-50%,-50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 't')} />
+              <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-white border border-blue-400 cursor-ns-resize"
+                style={{ transform: 'translate(-50%,50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'b')} />
+              <div className="absolute left-0 top-1/2 w-2 h-2 bg-white border border-blue-400 cursor-ew-resize"
+                style={{ transform: 'translate(-50%,-50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'l')} />
+              <div className="absolute right-0 top-1/2 w-2 h-2 bg-white border border-blue-400 cursor-ew-resize"
+                style={{ transform: 'translate(50%,-50%)' }}
+                onMouseDown={(e) => onMouseDown(e, 'r')} />
             </div>
           </div>
         </div>
 
         <p className="text-xs text-gray-400 px-4 pb-1 shrink-0">
-          拖动裁剪框移动位置 · 拖动右下角调整大小 · 拖动时保持选定比例
+          拖动框体移动 · 拖动四边或四角调整大小 · 保持选定比例
         </p>
         <div className="text-xs text-gray-500 px-4 pb-2 shrink-0">
           选区 {crop.w.toFixed(0)}% × {crop.h.toFixed(0)}%

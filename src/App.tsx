@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { modeThemes } from './config/modeThemes'
 import { UploadPanel } from './components/UploadPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ColorControlPanel } from './components/ColorControlPanel'
@@ -10,19 +11,32 @@ import { PalettePanel } from './components/PalettePanel'
 import { StatsPanel } from './components/StatsPanel'
 import { ExportPanel } from './components/ExportPanel'
 import { CropModal } from './components/CropModal'
+import { BackgroundRemovalPanel } from './components/BackgroundRemovalPanel'
+import { PixelGridImportPanel } from './components/PixelGridImportPanel'
+import { ExistingPatternImportPanel } from './components/ExistingPatternImportPanel'
+import { AppHeader } from './components/AppHeader'
+import { HomePage } from './components/HomePage'
+import { ComingSoonModal } from './components/ComingSoonModal'
+import { UserCenter } from './components/UserCenter'
+import { AiOptimizePage } from './components/AiOptimizePage'
 import type { BrandName, PaletteColor } from './types/palette'
 import type { PatternCell, PatternData, PixelCell } from './types/pattern'
+
+type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
+type AppPage = 'home' | 'workspace' | 'ai-optimize'
+type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | null
 import { TRANSPARENT_COLOR } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
 import { extractPixels } from './lib/image/pixelate'
+import { samplePixelGrid } from './lib/image/samplePixelGrid'
 import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { quantizeColors } from './lib/image/quantize'
 import { mergeLowUsageColors } from './lib/image/mergeColors'
 import { computeColorStats } from './lib/utils/stats'
 import { getPalette } from './data/palettes'
 import { transformImage, type ImageTransformOp } from './lib/image/transform'
-import { replaceColor, deleteColor, outlineBody } from './lib/editor/operations'
+import { replaceColor, deleteColor } from './lib/editor/operations'
 import {
   historyCreate, historyPush, historyUndo, historyRedo,
   canUndo, canRedo, type CellHistory,
@@ -31,6 +45,15 @@ import type { EditorTool, SelectionRect } from './lib/editor/types'
 import './index.css'
 
 function App() {
+  // ── App page routing ─────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState<AppPage>('home')
+  const [comingSoonFeature, setComingSoonFeature] = useState<ComingSoonFeature>(null)
+  const [isUserCenterOpen, setIsUserCenterOpen] = useState(false)
+  const [authReturnPage, setAuthReturnPage] = useState<AppPage | null>(null)
+
+  // ── Import mode ──────────────────────────────────────────────────────────────
+  const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
+
   // ── Image ───────────────────────────────────────────────────────────────────
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [workTitle, setWorkTitle] = useState('')
@@ -46,6 +69,7 @@ function App() {
   const [patternData, setPatternData] = useState<PatternData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [autoSelectPixelTab, setAutoSelectPixelTab] = useState(false)
 
   // ── Edit mode ───────────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false)
@@ -62,7 +86,7 @@ function App() {
   const [zoom, setZoom] = useState(1)
   const [mirror, setMirror] = useState(false)
   const [cellHistory, setCellHistory] = useState<CellHistory | null>(null)
-  const [showCellCodes, setShowCellCodes] = useState(true)
+  const [showCellCodes, setShowCellCodes] = useState(false)
   const [spacePanning, setSpacePanning] = useState(false)
 
   // ── Re-match when color-count settings change ───────────────────────────────
@@ -159,9 +183,11 @@ function App() {
       const beadCount = cells.filter(c => !c.isTransparent).length
       setPatternData({ size: { width, height }, cells, rawPixels: pixels, colorStats, beadCount, transparentCount })
       setCellHistory(historyCreate(cells))
+      setAutoSelectPixelTab(true)
     } catch (err) {
       setErrorMsg('图片处理失败，请重试')
       console.error(err)
+      setAutoSelectPixelTab(false)
     } finally {
       setIsGenerating(false)
     }
@@ -170,6 +196,67 @@ function App() {
   async function generatePattern() {
     if (!imageUrl) { setErrorMsg('请先上传图片'); return }
     await generatePatternFromUrl(imageUrl)
+  }
+
+  // ── Pixel grid recognition ──────────────────────────────────────────────────
+  async function generatePatternFromPixelGrid(params: {
+    imageUrl: string
+    gridCols: number
+    gridRows: number
+    cellSizePx: number
+    offsetX: number
+    offsetY: number
+    sampleMode: 'center' | 'average3x3'
+    preserveColorCount: boolean
+  }) {
+    setErrorMsg(null)
+    setIsGenerating(true)
+    setPatternData(null)
+    setEditMode(false)
+    setCellHistory(null)
+    try {
+      const pixels = await samplePixelGrid(params)
+      setRawPixels(pixels)
+
+      const palette = getPalette(brand)
+      const labCache = buildLabCache(palette)
+      const nonTransparent = pixels.filter(px => !px.isTransparent)
+      const transparentCount = pixels.length - nonTransparent.length
+      const ntRgb = nonTransparent.map(px => [px.r, px.g, px.b] as [number, number, number])
+
+      // Use maxColors limit or preserve original colors
+      const colorLimit = params.preserveColorCount ? ntRgb.length : maxColors
+      const clusters = ntRgb.length > 0 ? quantizeColors(ntRgb, colorLimit) : []
+
+      const clusterCache = new Map<string, ReturnType<typeof matchColor>>()
+      for (const c of clusters) {
+        const key = c.join(',')
+        if (!clusterCache.has(key)) clusterCache.set(key, matchColor(c[0], c[1], c[2], palette, labCache))
+      }
+      let ntIdx = 0
+      const w = params.gridCols
+      const h = params.gridRows
+      let cells: PatternCell[] = pixels.map((px, idx) => {
+        const col = idx % w
+        const row = Math.floor(idx / w)
+        if (px.isTransparent) return { row, col, isTransparent: true, color: TRANSPARENT_COLOR }
+        const cluster = clusters[ntIdx++]
+        const color = clusterCache.get(cluster.join(','))!
+        return { row, col, isTransparent: false, color }
+      })
+      if (mergeThreshold > 0) cells = mergeLowUsageColors(cells, labCache, mergeThreshold)
+      const colorStats = computeColorStats(cells)
+      const beadCount = cells.filter(c => !c.isTransparent).length
+      setPatternData({ size: { width: w, height: h }, cells, rawPixels: pixels, colorStats, beadCount, transparentCount })
+      setCellHistory(historyCreate(cells))
+      setImageUrl(params.imageUrl)
+      setWorkTitle('')
+    } catch (err) {
+      setErrorMsg('像素图识别失败，请检查参数或图片质量')
+      console.error(err)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   // ── Rematch on brand/color-count change ─────────────────────────────────────
@@ -309,13 +396,6 @@ function App() {
     }
   }, [editMode])
 
-  // ── Color operations ────────────────────────────────────────────────────────
-
-  function handleOutlineBody(color: PaletteColor) {
-    if (!patternData) return
-    applyEdit(outlineBody(patternData.cells, width, height, color))
-  }
-
   // ── Eyedropper pick: ONLY sets paint color + switches to brush
   // Highlight and replace are EXPLICIT separate actions, NOT automatic
   function handleColorPick(color: PaletteColor) {
@@ -370,23 +450,124 @@ function App() {
       setErrorMsg('请先生成图纸后再进入编辑模式')
       return
     }
-    setEditMode(v => !v)
+    setEditMode(v => {
+      if (!v) {
+        // Entering edit mode: set default zoom to 1.5x
+        setZoom(1.5)
+      }
+      return !v
+    })
   }
 
   const palette = getPalette(brand)
   const usedCodes = new Set(patternData?.colorStats.map(s => s.color.code) ?? [])
 
+  function handleNavigate(page: AppPage) {
+    setCurrentPage(page)
+  }
+
+  function handleFeatureClick(feature: ComingSoonFeature) {
+    if (feature === 'login') {
+      setAuthReturnPage('workspace')
+      setIsUserCenterOpen(true)
+    } else {
+      setComingSoonFeature(feature)
+    }
+  }
+
+  // 登录/注册成功后处理
+  function handleAuthSuccess() {
+    setIsUserCenterOpen(false)
+    if (authReturnPage) {
+      setCurrentPage(authReturnPage)
+      setAuthReturnPage(null)
+    } else {
+      setCurrentPage('workspace')
+    }
+  }
+
+  // 需要登录时的处理
+  function handleRequireLogin() {
+    setAuthReturnPage('ai-optimize')
+    setIsUserCenterOpen(true)
+  }
+
+  function handleStartCreating() {
+    setCurrentPage('workspace')
+  }
+
+  function handleSelectMode(mode: ImportMode) {
+    setImportMode(mode)
+    setCurrentPage('workspace')
+  }
+
+  function handleSelectAiOptimize() {
+    setCurrentPage('ai-optimize')
+  }
+
+  function handleUseAiResultInWorkspace(resultImageUrl: string) {
+    setImageUrl(resultImageUrl)
+    setWorkTitle('AI优化图片')
+    setImportMode('photo-direct')
+    setCurrentPage('workspace')
+  }
+
+  // Home page view
+  if (currentPage === 'home') {
+    return (
+      <>
+        <AppHeader
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onFeatureClick={handleFeatureClick}
+        />
+        <HomePage
+          onStartCreating={handleStartCreating}
+          onSelectMode={handleSelectMode}
+          onSelectAiOptimize={handleSelectAiOptimize}
+        />
+        {comingSoonFeature && (
+          <ComingSoonModal
+            isOpen={!!comingSoonFeature}
+            feature={comingSoonFeature}
+            onClose={() => setComingSoonFeature(null)}
+          />
+        )}
+      </>
+    )
+  }
+
+  // AI Optimize page view
+  if (currentPage === 'ai-optimize') {
+    return (
+      <>
+        <AppHeader
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onFeatureClick={handleFeatureClick}
+        />
+        <AiOptimizePage
+          onBack={() => setCurrentPage('home')}
+          onUseResultInWorkspace={handleUseAiResultInWorkspace}
+          onRequireLogin={handleRequireLogin}
+          currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
+        />
+      </>
+    )
+  }
+
+  // Workspace view
+  const currentTheme = modeThemes[importMode]
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shrink-0">
-        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">豆</div>
-        <div>
-          <h1 className="text-base font-semibold text-gray-900 leading-none">哆啦拼豆图纸转换器</h1>
-          <p className="text-xs text-gray-400 mt-0.5">哆啦拼豆图纸库</p>
-        </div>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">v0.4.1</span>
-      </header>
+    <div className={`flex flex-col h-screen bg-gradient-to-br ${currentTheme.bgGradient}`}>
+      {/* App Header */}
+      <AppHeader
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onFeatureClick={handleFeatureClick}
+      />
+
+      {/* Old workspace content below */}
 
       {errorMsg && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-600 flex items-center justify-between shrink-0">
@@ -398,7 +579,48 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left sidebar ─────────────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4">
-          <UploadPanel onImageLoad={handleImageLoad} />
+          {/* Current Mode Badge */}
+          <div className="mb-6 pb-4 border-b border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">当前模式</p>
+            <div className={`inline-flex h-8 items-center justify-center rounded-full px-3 text-sm font-bold text-white ${currentTheme.badgeBg}`}>
+              {currentTheme.name}
+            </div>
+          </div>
+
+          {/* Import Mode Selection */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">导入模式</p>
+            <div className="space-y-1">
+              {([
+                { id: 'photo-direct' as const, label: '📸 直接拍照' },
+                { id: 'ai-enhanced' as const, label: '🤖 AI 图片优化' },
+                { id: 'pixel-grid' as const, label: '🔲 像素识别' },
+                { id: 'existing-pattern' as const, label: '📋 既有图纸' },
+              ] as Array<{ id: ImportMode; label: string }>).map(mode => {
+                const modeTheme = modeThemes[mode.id]
+                const isSelected = importMode === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setImportMode(mode.id)}
+                    className={`w-full text-left px-3 py-2 text-xs rounded border transition-colors ${
+                      isSelected
+                        ? `bg-opacity-10 border-opacity-50 font-medium ${modeTheme.badgeBg} ${modeTheme.borderColor}`
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Upload Panel or Mode-Specific Panel */}
+          {importMode === 'photo-direct' && <UploadPanel onImageLoad={handleImageLoad} />}
+          {importMode === 'ai-enhanced' && <BackgroundRemovalPanel onApply={(url) => { setImageUrl(url) }} isLoading={isGenerating} />}
+          {importMode === 'pixel-grid' && <PixelGridImportPanel onGridDataReady={generatePatternFromPixelGrid} isProcessing={isGenerating} />}
+          {importMode === 'existing-pattern' && <ExistingPatternImportPanel onImageLoad={handleImageLoad} />}
 
           {/* Image preprocessing */}
           {imageUrl && (
@@ -407,7 +629,10 @@ function App() {
               <div className="grid grid-cols-3 gap-1 mb-1">
                 {([['rotate-ccw', '↺ 左转'], ['rotate-180', '⟳ 180°'], ['rotate-cw', '↻ 右转']] as [ImageTransformOp, string][]).map(([op, label]) => (
                   <button key={op} onClick={() => handleTransformImage(op)}
-                    className="text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                    className="text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                    style={{ borderColor: 'inherit' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                     {label}
                   </button>
                 ))}
@@ -415,16 +640,77 @@ function App() {
               <div className="grid grid-cols-2 gap-1 mb-1">
                 {([['flip-h', '↔ 水平翻转'], ['flip-v', '↕ 垂直翻转']] as [ImageTransformOp, string][]).map(([op, label]) => (
                   <button key={op} onClick={() => handleTransformImage(op)}
-                    className="text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                    className="text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                    style={{ borderColor: 'inherit' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                     {label}
                   </button>
                 ))}
               </div>
               <button
                 onClick={() => setShowCropModal(true)}
-                className="w-full text-xs py-1.5 rounded border border-gray-300 hover:border-blue-400 text-gray-600">
+                className="w-full text-xs py-1.5 rounded border border-gray-300 text-gray-600 transition-colors"
+                style={{ borderColor: 'inherit' }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentTheme.accentColor)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}>
                 ✂ 重新裁剪
               </button>
+            </div>
+          )}
+
+          {/* Zoom controls (edit mode only) */}
+          {editMode && patternData && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">缩放倍率</p>
+              <div className="flex flex-wrap gap-1">
+                {[1, 1.5, 2, 3, 4].map(z => (
+                  <button key={z} onClick={() => setZoom(z)}
+                    className={`flex-1 min-w-12 py-1.5 text-xs rounded border transition-colors ${
+                      zoom === z
+                        ? 'bg-blue-500 text-white border-blue-500 font-medium'
+                        : 'border-gray-300 text-gray-600 hover:border-blue-400'
+                    }`}
+                    title={`${z}× zoom · 使用 +/− 键快速调整`}
+                  >
+                    {z === 1 ? '1×' : `${z}×`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Color tools (edit mode only) */}
+          {editMode && activeColor && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">颜色工具</p>
+              <div className="bg-gray-50 rounded border border-gray-200 p-2 mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="w-5 h-5 rounded border border-gray-300 shrink-0"
+                    style={{ backgroundColor: activeColor.hex }}
+                  />
+                  <span className="text-xs font-mono text-gray-700">{activeColor.code}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={handleHighlightActiveColor}
+                  className={`w-full py-1.5 text-xs rounded border transition-colors ${
+                    highlightColorCode === activeColor.code
+                      ? 'bg-yellow-400 text-yellow-900 border-yellow-400 font-medium'
+                      : 'border-gray-300 text-gray-600 hover:border-yellow-400'
+                  }`}
+                >
+                  {highlightColorCode === activeColor.code ? '✦ 高亮中' : '◈ 高亮此颜色'}
+                </button>
+                <button
+                  onClick={handleStartReplaceActiveColor}
+                  className="w-full py-1.5 text-xs rounded border border-gray-300 text-gray-600 hover:border-amber-400 transition-colors"
+                >
+                  ⇄ 替换此颜色
+                </button>
+              </div>
             </div>
           )}
 
@@ -434,9 +720,6 @@ function App() {
               <SettingsPanel
                 width={width} height={height}
                 onSizeChange={handleSizeChange}
-                onGenerate={generatePattern}
-                isGenerating={isGenerating}
-                canGenerate={!!imageUrl}
                 workTitle={workTitle}
                 onWorkTitleChange={setWorkTitle}
               />
@@ -448,9 +731,12 @@ function App() {
             </>
           )}
 
-          {/* Editor tools (edit mode only) */}
-          {editMode && patternData && (
-            <>
+        </aside>
+
+        {/* ── Center ─────────────────────────────────────────────────────── */}
+        <main className="flex-1 overflow-hidden p-4 flex flex-col">
+          <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col min-h-0 relative">
+            {editMode && patternData && (
               <EditorToolbar
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
@@ -458,13 +744,10 @@ function App() {
                 highlightColorCode={highlightColorCode}
                 fillThreshold={fillThreshold}
                 onFillThresholdChange={setFillThreshold}
-                zoom={zoom}
-                onZoomChange={setZoom}
                 canUndo={cellHistory ? canUndo(cellHistory) : false}
                 canRedo={cellHistory ? canRedo(cellHistory) : false}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
-                onClearHighlight={() => { setHighlightColorCode(null); setPickedSourceColor(null) }}
                 hasSelection={!!selection}
                 onClearSelection={() => setSelection(null)}
                 onInvertSelection={handleInvertSelection}
@@ -474,53 +757,32 @@ function App() {
                 showCellCodes={showCellCodes}
                 onToggleCellCodes={() => setShowCellCodes(v => !v)}
               />
-              {activeColor && (
-                <button
-                  onClick={() => handleOutlineBody(activeColor)}
-                  className="w-full mt-2 py-1.5 text-xs border border-gray-300 rounded hover:border-blue-400 text-gray-600"
-                >
-                  描边主体（当前色）
-                </button>
-              )}
-            </>
-          )}
-        </aside>
-
-        {/* ── Center ─────────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-hidden p-4 flex flex-col">
-          <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col min-h-0 relative">
-            {/* Edit mode toggle — top right of canvas area */}
-            <div className="absolute top-2 right-2 z-10">
-              <button
-                onClick={toggleEditMode}
-                className={`text-xs px-2.5 py-1 rounded shadow-sm border transition-colors ${
-                  editMode
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : patternData
-                    ? 'bg-white border-blue-400 text-blue-600 hover:bg-blue-50'
-                    : 'bg-white border-gray-200 text-gray-400 cursor-default'
-                }`}
-              >
-                {editMode ? '← 返回预览' : '✏️ 进入编辑'}
-              </button>
-            </div>
-
-            <div className="flex-1 min-h-0 p-4 pt-10 flex flex-col">
+            )}
+            <div className="flex-1 min-h-0 p-4 flex flex-col relative">
               {editMode && patternData ? (
-                <EditableCanvas
-                  patternData={patternData}
-                  activeTool={activeTool}
-                  activeColor={activeColor}
-                  highlightColorCode={highlightColorCode}
-                  selection={selection}
-                  mirror={mirror}
-                  zoom={zoom}
-                  onCellsChange={applyEdit}
-                  onColorPick={handleColorPick}
-                  onSelectionChange={setSelection}
-                  showCellCodes={showCellCodes}
-                  spacePanning={spacePanning}
-                />
+                <>
+                  <EditableCanvas
+                    patternData={patternData}
+                    activeTool={activeTool}
+                    activeColor={activeColor}
+                    highlightColorCode={highlightColorCode}
+                    selection={selection}
+                    mirror={mirror}
+                    zoom={zoom}
+                    onCellsChange={applyEdit}
+                    onColorPick={handleColorPick}
+                    onSelectionChange={setSelection}
+                    showCellCodes={showCellCodes}
+                    spacePanning={spacePanning}
+                  />
+                  <button
+                    onClick={toggleEditMode}
+                    className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-[#ff3f78] to-[#ff78a7] rounded-full hover:from-[#ff2d6a] hover:to-[#ff6899] transition-all shadow-md"
+                  >
+                    <span>←</span>
+                    返回预览
+                  </button>
+                </>
               ) : (
                 <PreviewCanvas
                   imageUrl={imageUrl}
@@ -528,6 +790,11 @@ function App() {
                   width={width}
                   height={height}
                   mirror={mirror}
+                  onEditClick={toggleEditMode}
+                  autoSelectPixelTab={autoSelectPixelTab}
+                  onGenerate={generatePattern}
+                  isGenerating={isGenerating}
+                  canGenerate={!!imageUrl}
                 />
               )}
             </div>
@@ -619,6 +886,34 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Coming Soon Modal */}
+      {comingSoonFeature && (
+        <ComingSoonModal
+          isOpen={!!comingSoonFeature}
+          feature={comingSoonFeature}
+          onClose={() => setComingSoonFeature(null)}
+        />
+      )}
+
+      {/* User Center Modal */}
+      <UserCenter
+        isOpen={isUserCenterOpen}
+        onClose={() => setIsUserCenterOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
+      />
+
+      {/* User Center Button (Floating) */}
+      {currentPage === 'workspace' && (
+        <button
+          onClick={() => setIsUserCenterOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition flex items-center justify-center z-40 hover:scale-110"
+          title="打开用户中心"
+        >
+          <span className="text-2xl">👤</span>
+        </button>
       )}
     </div>
   )

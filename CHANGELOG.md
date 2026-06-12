@@ -1,5 +1,1339 @@
 # CHANGELOG
 
+## v0.9.0-lite - 2026-06-11 ~ 2026-06-12
+
+### 🚀 部署信息
+
+**版本标签**：`v0.9.0-lite`  
+**部署日期**：2026-06-11（CloudBase）/ 2026-06-12（Cloudflare Pages）  
+**主线部署平台**：Cloudflare Pages（推荐，已验证成功）  
+**主线公网访问**：https://dora-beads-pattern-converter-git.pages.dev  
+**主线部署状态**：✅ 已部署到生产环境
+
+**备选部署平台**：腾讯云 CloudBase（HTTP 418 未解决，暂停排查）  
+**备选公网访问**：https://dora-beads-prod-d3fnxast620bb482-1440665484.tcloudbaseapp.com  
+**备选部署状态**：⚠️ 文件已部署，HTTP 访问服务路由配置问题未解决
+
+**版本类型**：**无数据库安全版本 - 可安全回滚**
+- ❌ 无后端依赖（server/ 代码完整保留，未部署）
+- ❌ 无数据库依赖（PostgreSQL 未启用）
+- ✅ 纯前端静态托管（只部署 dist/）
+- ✅ 成本：¥0/月
+- ✅ 完全可逆：可随时恢复完整版本（v0.8.1+）
+- ✅ 回滚文档：docs/rollback-v0.9.0-lite.md
+
+### 🎯 战略调整：推出会员体验版（LITE_MODE）
+
+**目标**：零成本、无数据库的快速上线版本  
+**影响**：项目从"PostgreSQL 迁移方案"改为"轻量体验版"
+
+### ✨ 新增功能
+
+#### LITE_MODE 配置系统
+- ✅ 新增 `VITE_LITE_MODE` 环境变量
+- ✅ 新增 `VITE_MEMBER_ACCESS_CODE` 会员口令配置
+- ✅ 创建 `src/config/liteMode.ts` 配置管理
+- ✅ 创建 `src/AppWithLiteMode.tsx` 应用包装层
+
+#### 会员口令验证
+- ✅ 新增 `MemberAccessModal` 组件
+- ✅ 首次访问时显示口令输入框
+- ✅ 新增 `VITE_ACCESS_CODE_VERSION` 环境变量（版本号强制更新机制）
+- ✅ 口令验证通过后保存访问权限和版本号到 localStorage
+- ✅ 版本号不匹配时自动清除旧授权，强制重新输入口令
+- ✅ 支持其他标签页同步访问状态
+- ✅ 导出 `clearAccessCodeAuth()` 函数，支持程序化清除授权
+
+#### 本地作品存储
+- ✅ 创建 `localWorksService` 本地存储服务
+- ✅ 使用 localStorage 保存最近 10 个作品
+- ✅ 支持作品 CRUD 操作（创建、读取、更新、删除）
+- ✅ 自动按创建时间排序
+
+#### AppHeader 隐藏功能
+- ✅ 根据 LITE_MODE_CONFIG 动态显示/隐藏菜单项
+- ✅ LITE_MODE 下隐藏："我的作品" "会员" "AI次数" "兑换码" "登录"
+- ✅ 添加版本标识标签（"Lite 会员体验版"）
+
+#### 环境配置
+- ✅ 更新 `.env.example` 添加 LITE_MODE、MEMBER_ACCESS_CODE、ACCESS_CODE_VERSION 参数说明
+- ✅ 更新 `.env.local` 启用 LITE_MODE 为默认，添加 ACCESS_CODE_VERSION=2026-06
+- ✅ `.env.production` 配置为 LITE_MODE，添加 ACCESS_CODE_VERSION=2026-06
+- ✅ 提示生产环境上线前必须修改 VITE_MEMBER_ACCESS_CODE 为实际口令
+
+### 📝 文档更新
+
+- ✅ README.md：添加 LITE_MODE 说明、启动指南、口令机制说明
+- ✅ docs/LITE_MODE_SETUP.md：完整的 LITE_MODE 配置指南（含口令管理和版本号控制章节）
+- ✅ 说明无需 PostgreSQL、无需后端、纯前端部署
+- ✅ 详细说明每月/每期更换口令的步骤
+
+### ⚠️ 会员口令机制说明
+
+**固定会员口令 + 版本号强制更新：**
+
+- **不支持一人一码**：所有授权会员共享同一口令（早期内测方案）
+- **不支持随机临时口令**：不生成过期的验证码
+- **不接后端/数据库**：口令由人工在环境变量中管理
+- **每月/每期更换**：修改 `VITE_MEMBER_ACCESS_CODE` 和 `VITE_ACCESS_CODE_VERSION` 即可
+- **强制更新机制**：版本号不匹配时自动清除旧授权，用户需重新输入新口令
+
+**这是 LITE_MODE 的早期会员体验方案，未来如需一人一码，需要恢复后端 + PostgreSQL 的完整用户认证系统。**
+
+### 🔄 架构变化
+
+**移除依赖**：
+- ❌ 不再依赖 PostgreSQL
+- ❌ 不再依赖后端 Node.js 服务
+- ❌ 不再需要注册登录系统
+- ❌ 不再需要会员管理系统
+
+**保留（代码未删除，仅隐藏）**：
+- ✅ 注册登录代码（可在 LITE_MODE=false 时恢复）
+- ✅ 我的作品云端库代码（可恢复）
+- ✅ 会员系统代码（可恢复）
+- ✅ AI 次数代码（可恢复）
+- ✅ 兑换码代码（可恢复）
+- ✅ 云端保存代码（可恢复）
+
+**替代方案**：
+- 用户认证 → 简单口令验证
+- 作品云端存储 → localStorage 本地存储
+- 会员系统 → 人工管理
+- AI 次数计费 → Mock 模式（无限）
+
+### 🎯 保留的核心功能
+
+✅ 图片上传  
+✅ 拼豆图纸生成  
+✅ 品牌色号切换  
+✅ 图纸预览  
+✅ 色号用量统计  
+✅ PNG/PDF/CSV 导出  
+
+### 📊 成本影响
+
+| 指标 | 旧方案 | 新方案 | 节省 |
+|------|--------|--------|------|
+| 月成本 | ¥300-600 | ¥0 | ¥300-600 |
+| 年成本 | ¥3,600-7,200 | ¥0 | ¥3,600-7,200 |
+| 部署平台 | CloudBase + RDS | CloudBase 或其他静态托管 | 100% 静态 |
+| 维护工作 | 数据库备份、监控 | 无 | 99% 减少 |
+
+### 🚀 部署方式
+
+**之前**：需要后端 + 数据库  
+**现在**：`npm run build` → 部署到 CloudBase（推荐）或 Cloudflare Pages 等
+
+#### CloudBase 配置调整
+- ✅ 创建备份：`docs/cloudbase-config-backup-v0.8.1.json`（保留原后端配置）
+- ✅ 更新 `cloudbaserc.json` 为静态托管配置
+- ✅ 移除 `cloudRunServices` 后端服务配置
+- ✅ 仅部署 `dist/` 目录到 CloudBase 静态托管
+- ✅ 不部署 `server/`（后端代码完全保留）
+
+### 🔮 未来扩展
+
+LITE_MODE 保留了所有原有功能代码，只是通过配置隐藏：
+
+- 如需恢复完整功能，仅需修改 `.env.local`：`VITE_LITE_MODE=false`
+- 无需重写任何功能代码
+- 所有原有的认证、数据库、会员逻辑完整保留
+- 可随时迁移回完整版本
+
+---
+
+# CHANGELOG
+
+## v0.8.1-cloudbase-mvp-staging - 2026-06-08
+
+### 🚀 CloudBase MVP 部署准备
+
+**部署配置文件**：
+- ✅ 新增 cloudbaserc.json 云开发配置
+- ✅ 新增 server/Dockerfile 容器化部署
+- ✅ 新增 server/.dockerignore Docker 忽略列表
+- ✅ 新增 .env.production 生产环境配置
+
+**部署文档**：
+- ✅ 新增 docs/CLOUDBASE_MVP_DEPLOYMENT.md 完整部署指南
+- ✅ 新增 docs/nginx.conf Nginx 反向代理示例
+- ✅ 说明 Supabase 免费数据库方案
+- ✅ 说明 CloudBase 静态托管和云托管部署流程
+
+**前端生产优化**：
+- ✅ 配置 VITE_API_BASE_URL=/api（支持相对路径）
+- ✅ 保持 AI Mock 和 COS Mock（MVP 阶段）
+- ✅ 支持生产环境环境变量配置
+
+**后端生产优化**：
+- ✅ Dockerfile 支持多阶段编译
+- ✅ 健康检查端点配置
+- ✅ 环境变量支持云部署
+- ✅ Prisma migrate 自动执行
+
+**当前 MVP 状态**：
+- ✅ 登录系统：真实
+- ✅ 数据库：真实（需配置云实例）
+- ✅ 会员系统：真实
+- ✅ AI 次数：真实
+- ✅ 作品保存：真实
+- ✅ AI 优化：Mock
+- ✅ COS 存储：Mock
+- ❌ 支付系统：未接入
+
+**部署成本**：
+- Supabase：免费 + 按量
+- CloudBase：100 万次调用免费
+- 预估月成本：$0-50
+
+---
+
+## v0.8.0-e - ai-jobs-and-cos-storage - 2026-06-08
+
+### ✨ 核心改进
+
+**COS 文件存储服务**：
+- ✅ 创建 server/services/cosService.ts COS 上传服务
+- ✅ 支持 uploadBufferToCos / uploadBase64ToCos
+- ✅ 支持生成规范化 COS 存储路径
+- ✅ COS 密钥配置在 server/.env.local
+
+**文件上传 API**：
+- ✅ 新增 POST /api/uploads/image 图片上传接口
+- ✅ 支持 JPG / PNG / WEBP 格式，5MB 限制
+- ✅ 上传成功返回 fileUrl（COS URL）
+- ✅ uploaded_images 表自动记录
+
+**AI 任务记录**：
+- ✅ 创建 server/services/aiJobService.ts 任务记录服务
+- ✅ 支持 pending/processing/success/failed 状态
+- ✅ 记录 source_image_url / result_image_url
+- ✅ 记录 error_message 和 request_id
+
+**AI 优化流程改造**：
+- ✅ POST /api/ai-style/generate 需要登录和 Bearer token
+- ✅ 检查 AI 次数是否足够
+- ✅ AI 成功后才扣除 AI 次数
+- ✅ AI 失败不扣 AI 次数
+- ✅ 腾讯混元临时 URL 转存 COS
+- ✅ Mock 模式也生成 result 记录
+
+**前端改造**：
+- ✅ 新增 src/services/api/uploadsApi.ts 上传客户端
+- ✅ 支持 uploadImage(file) 上传到 /api/uploads/image
+- ✅ 错误处理：上传失败显示错误提示
+
+**安全特性**：
+- ✅ COS 密钥只在 server/.env.local（未追踪）
+- ✅ AI 优化接口需要认证
+- ✅ 用户只能访问自己的图片和任务
+- ✅ 防止 blob: 和 data: URL 长期保存
+
+---
+
+## v0.8.0-d - works-postgresql-migration - 2026-06-08
+
+### ✨ 核心改进
+
+**作品系统从 localStorage 迁移到 PostgreSQL**：
+- ✅ 创建 server/services/worksService.ts 作品业务逻辑
+- ✅ 新增 GET /api/works 获取当前用户所有作品
+- ✅ 新增 GET /api/works/:id 获取单个作品
+- ✅ 新增 POST /api/works 创建新作品
+- ✅ 新增 PATCH /api/works/:id 更新作品
+- ✅ 新增 DELETE /api/works/:id 删除作品
+
+**前端作品管理更新**：
+- ✅ 创建 src/services/api/worksApi.ts API 客户端
+- ✅ 重写 useWorks hook 改为调用后端 API
+- ✅ 更新 MyWorksPanel 支持异步操作和加载状态
+- ✅ 我的作品页面显示服务端数据
+- ✅ 支持作品保存、重命名、删除
+
+**权限隔离**：
+- ✅ 所有作品 API 需要 authMiddleware 认证
+- ✅ 用户只能访问/修改/删除自己的作品
+- ✅ 非 owner 的作品访问返回 404
+
+**数据持久化**：
+- ✅ 刷新页面后作品仍然存在
+- ✅ localStorage 不再作为主作品数据源
+- ✅ 跨设备作品同步（通过 PostgreSQL）
+
+---
+
+## v0.8.0-c - membership-and-ai-credits-api - 2026-06-08
+
+### ✨ 核心改进
+
+**会员系统从 localStorage 迁移到 PostgreSQL API**：
+- ✅ 创建 server/services/membershipService.ts 会员业务逻辑
+- ✅ 新增 GET /api/membership/me 获取当前用户会员信息
+- ✅ 新增 POST /api/membership/dev-upgrade 开发期升级会员
+- ✅ 会员等级权益配置（free / monthly / yearly / lifetime）
+- ✅ 升级会员时自动同步 AI 次数 dailyTotal
+
+**AI 次数系统从 localStorage 迁移到 PostgreSQL API**：
+- ✅ 创建 server/services/creditsService.ts AI 次数业务逻辑
+- ✅ 新增 GET /api/credits/me 获取当前用户 AI 次数
+- ✅ 新增 POST /api/credits/consume 扣除 AI 次数
+- ✅ 新增 POST /api/credits/dev-reset 开发期重置次数
+- ✅ 自动跨天重置 dailyUsed
+- ✅ 优先扣除每日次数，不足时扣额外次数
+
+**API 安全特性**：
+- ✅ 所有会员和 AI 接口都需要 authMiddleware 认证
+- ✅ AI 次数必须在后端扣除（前端无法直接修改）
+- ✅ 开发接口（dev-upgrade / dev-reset）仅非 production 可用
+- ✅ 次数不足返回失败，不会出现负数
+- ✅ AI 调用成功后才扣次数，失败不扣
+
+**数据库同步**：
+- ✅ 升级会员时 ai_credits.dailyTotal 自动更新
+- ✅ 扣除次数时 ai_credits.daily_used 原子性更新
+- ✅ 跨天时自动重置 daily_used 和 reset_at
+
+**测试覆盖**：
+- ✅ 注册新用户自动创建 membership 和 ai_credits ✓
+- ✅ 获取会员信息返回权益配置 ✓
+- ✅ 获取 AI 次数返回详细额度 ✓
+- ✅ 扣除次数成功时更新数据库 ✓
+- ✅ 次数不足时返回失败 ✓
+- ✅ 开发期升级会员并同步次数 ✓
+- ✅ 开发接口在 production 被禁用 ✓
+
+**前端兼容性**：
+- ⚠️ 前端可直接调用新 API（无需改动现有登录流程）
+- ⚠️ 现有 localStorage 会员和次数作为 fallback（暂时保留）
+- ⚠️ 用户中心可改为显示服务端数据（可选）
+
+---
+
+## v0.8.0-b - auth-postgresql-migration - 2026-06-08
+
+### ✨ 核心改进
+
+**Auth 用户系统从 JSON 迁移到 PostgreSQL**：
+- ✅ 创建 server/services/dbUserStore.ts，替代 JSON 文件存储
+- ✅ POST /api/auth/register 现在写入 PostgreSQL users 表
+- ✅ 注册时自动创建默认 membership（level = free）
+- ✅ 注册时自动创建默认 ai_credits（dailyTotal = 5）
+- ✅ POST /api/auth/login 从 PostgreSQL users 表查询用户
+- ✅ 登录成功后更新 last_login_at 时间戳
+- ✅ GET /api/auth/me 从 PostgreSQL users 表读取当前用户
+- ✅ 所有 Auth API 保持前端兼容（无需前端改动）
+
+**API 兼容性**：
+- ✅ 注册请求/响应格式保持不变
+- ✅ 登录请求/响应格式保持不变
+- ✅ GET /me 响应格式保持不变
+- ✅ passwordHash 从不返回给前端
+
+**安全特性**：
+- ✅ 密码仍使用 bcryptjs hash（10 轮）
+- ✅ JWT Token 仍 7 天有效期
+- ✅ 邮箱唯一性在数据库层强制
+- ✅ 重复注册返回统一错误消息
+- ✅ 重复邮箱不会创建多个用户
+
+**数据库状态**：
+- ✅ users 表：存储用户认证信息
+- ✅ memberships 表：自动创建 free 级别会员
+- ✅ ai_credits 表：自动创建 5 次日免费额度
+- ✅ 前两张表由 users 表的 1:1 关系保证完整性
+
+**保留向后兼容**：
+- ⚠️ server/data/users.json 暂时保留但不再使用
+- ⚠️ server/services/userStore.ts 暂时保留但不再使用
+- 可在后续版本删除历史代码
+
+---
+
+## v0.8.0-a - database-connection-and-schema - 2026-06-08
+
+### ✨ 核心改进
+
+**PostgreSQL + Prisma 数据库基础架构**：
+- ✅ 安装 Prisma 5 ORM 和 PostgreSQL 驱动
+- ✅ 创建 6 张数据库表的 Schema（Prisma models）
+  - users（用户认证）
+  - memberships（会员权限）
+  - ai_credits（AI 次数）
+  - works（拼豆作品）
+  - ai_jobs（AI 优化任务）
+  - uploaded_images（文件管理）
+- ✅ 运行 Prisma migrate 创建所有表和索引
+- ✅ 本地 PostgreSQL 18 连接成功
+- ✅ 创建 server/services/db.ts 数据库客户端单例
+- ✅ 创建 server/scripts/check-db.ts 数据库连接测试脚本
+- ✅ 新增 `npm run db:check` 脚本
+
+**后端改进**：
+- ✅ /api/health 健康检查新增 database 状态
+- ✅ 数据库连接状态实时检测（无需手动配置）
+- ✅ 版本号更新到 0.8.0-a
+
+**安全特性**：
+- ✅ DATABASE_URL 只在 .env（自动加载）和 .env.local
+- ✅ 敏感配置文件保持不被 Git 跟踪
+- ✅ Auth 仍使用 users.json（未迁移）
+
+**不做的事**：
+- ❌ 暂未迁移现有 Auth 系统（保留 users.json）
+- ❌ 暂未迁移会员和 AI 次数（保留 localStorage）
+- ❌ 暂未迁移作品数据（保留 localStorage）
+- ❌ 暂未接入 COS 文件存储
+- ❌ 暂未进行数据迁移（本地测试数据）
+
+### 🔧 技术细节
+
+**Prisma 配置**：
+- schema.prisma: 6 张表的完整 Model 定义（cuid() 主键、关系、索引）
+- .env: DATABASE_URL 指向本地 PostgreSQL（postgresql://jasmine@localhost/dora_dev）
+- PrismaClient 单例模式避免连接泄漏
+
+**数据库表结构**：
+- 所有字段使用 snake_case（通过 @map 映射）
+- 所有时间戳使用 UTC DateTime
+- User 与其他表 1:1（membership, aiCredits）或 1:N（works, aiJobs, uploadedImages）关系
+
+**前后端版本**：
+- 前端: 0.8.0
+- 后端: 0.8.0
+- package.json 统一版本号
+
+---
+
+## v0.7.8 - workspace-ai-optimizer-mvp - 2026-06-08
+
+### ✨ 核心改进
+
+**工作台 AI 图片优化 MVP 完整闭环**：
+- ✅ 工作台 AI 图片优化新增独立文件上传入口
+- ✅ 支持 JPG/PNG/WEBP 格式，最大 5MB
+- ✅ 上传后实时显示图片预览和文件名
+- ✅ 支持切换优化方式（10个预设）
+- ✅ Mock 模式下优化完成后显示结果图
+- ✅ 新增"用此图生成拼豆图纸"按钮，优化图导入工作台主流程
+- ✅ 新增"下载优化图"功能（dora-ai-optimized-时间戳.png）
+- ✅ 新增"继续优化"按钮，支持重新选择优化方式
+
+**代码和版本**:
+- ✅ 前后端版本号统一更新到 0.7.8
+- ✅ 所有敏感文件安全（.env.local、users.json 已加入 .gitignore）
+
+---
+
+## v0.7.7 - tencent-hunyuan-real-ai - 2026-06-07
+
+### ✨ 核心改进
+
+**腾讯混元真实 AI 优化集成**：
+- ✅ 实现 tencentcloud-sdk-nodejs 真实调用
+- ✅ ImageToImage 接口用于风格转换和拼豆优化
+- ✅ RefineImage 接口用于提高清晰度
+- ✅ 后端正确识别 real 模式并调用真实 SDK
+- ✅ 修复 AI 优化页面仍显示 Mock 的问题
+- ✅ 动态显示运行模式指示（Mock/Real）
+
+**工作台改名和改进**:
+- ✅ 工作台 AI 增强改名为 AI 图片优化
+- ✅ 改进优化方式文案和分类
+- ✅ 移除灰色不可用按钮，所有选项都可点击
+
+---
+
+## v0.7.6 - real-auth-foundation - 2026-06-07
+
+### ✨ 核心改进
+
+**真实邮箱密码登录系统基础版**：
+- ✅ 后端新增真实认证 API：POST /api/auth/register、POST /api/auth/login、GET /api/auth/me、POST /api/auth/logout
+- ✅ 密码使用 bcryptjs hash 存储，不保存明文
+- ✅ JWT token 管理登录状态，7 天有效期
+- ✅ 本地 JSON 文件存储用户数据（开发专用）
+- ✅ 前端认证 provider pattern（mock vs real）
+- ✅ 用户中心"状态"Tab 支持真实登录/注册表单
+- ✅ Real 模式下显示邮箱密码登录界面，注册后立即登录
+- ✅ AI 优化页面内嵌登录表单，登录后自动继续优化
+- ✅ 刷新页面后保持登录状态（localStorage token + user）
+- ✅ 保留 Mock 模式作为开发后备
+
+**环保要求**：
+- ✅ JWT_SECRET 只在 server/.env.local，不进代码
+- ✅ 统一错误提示"邮箱或密码错误"，不泄露具体信息
+- ✅ .env.local 已在 .gitignore
+
+**向后兼容**：
+- ✅ 图纸生成、AI 优化核心逻辑保持不变
+- ✅ Mock 模式完全保留
+- ✅ 现有会员 / 次数 / 作品系统保持兼容
+
+---
+
+## v0.7.5 - ai-optimization-workflow-redesign - 2026-06-07
+
+### ✨ 核心改进
+
+**将 AI 优化功能从用户中心独立出来**：
+- ✅ 新增独立的 AI 优化图片页面（src/components/AiOptimizePage/index.tsx）
+- ✅ AppHeader 新增 "AI 优化" 导航项
+- ✅ 首页 "AI 优化后转图纸" 卡片直接进入独立 AI 优化页面
+- ✅ 用户中心移除 AI 风格化 Tab，仅保留状态、会员、我的作品、兑换码
+
+**统一运行模式显示**：
+- ✅ 修复 Real/Mock 模式文案冲突（之前标题显示 Real，次数区域显示"当前为 mock 模式"）
+- ✅ AI 优化页面顶部统一显示运行模式（Real 真实 AI / Mock 模拟）
+- ✅ 消除所有页面的模式显示冲突
+
+**完整 AI 优化工作流**：
+- ✅ AI 优化页面支持上传图片或使用工作台图片
+- ✅ 支持选择优化方式（图片处理/风格转换 两个分组）
+- ✅ 支持调整优化强度和保留原色参数
+- ✅ AI 优化完成后显示结果图预览
+- ✅ 支持 "用此图生成拼豆图纸" 按钮直接导入工作台
+- ✅ 支持 "下载优化图" 和 "继续优化" 操作
+
+**登录门控**：
+- ✅ 未登录点击 "开始 AI 优化" 时在页面内显示登录提示
+- ✅ 点击 "去登录" 调用 login 函数，点击 "取消" 关闭提示
+- ✅ 不会强行跳转离开 AI 优化页面
+
+**用户中心优化**：
+- ✅ 用户中心始终显示 AI 次数概览
+- ✅ AI 优化页面顶部也显示今日剩余 AI 次数
+- ✅ 用户中心专注账号、会员、作品、兑换码管理
+
+### 文件改动
+
+**新增**：
+- `src/components/AiOptimizePage/index.tsx` — AI 优化独立页面
+
+**修改**：
+- `src/App.tsx` — 新增 'ai-optimize' page type，新增两个 handler，新增 AI 优化页面 render 分支
+- `src/components/AppHeader/index.tsx` — 添加 'AI 优化' 导航项
+- `src/components/HomePage/index.tsx` — 更新 'ai-enhanced' 卡片指向 AI 优化页面，更新卡片文案
+- `src/components/UserCenter/index.tsx` — 移除 'ai-style' Tab 和相关 hooks 调用，始终显示 AI 次数，更新版本号
+
+### 向后兼容
+
+- ✅ AiStylePanel.tsx 保留但未在 UserCenter 展示
+- ✅ Mock 模式保留，仍可用于测试
+- ✅ 所有图纸生成功能保持不变
+- ✅ 原有的直接上传转图纸功能不受影响
+
+---
+
+## v0.7.4-tencent-hunyuan-real-sdk - 2026-06-07
+
+### 🎯 版本目标
+
+在 v0.7.3 Provider 框架基础上，实现真实腾讯混元 SDK 调用。跑通完整的真实 AI 图像处理链路。
+
+**✅ 关键改进**：v0.7.3 中的 TODO 占位和 mock URL 已全部替换为真实 SDK 调用。
+
+### ✨ 核心实现
+
+**腾讯混元 SDK 真实调用**：
+- ✅ ImageToImage 真实 API 调用（图像风格化）
+- ✅ RefineImage 真实 API 调用（图片变清晰）
+- ✅ 使用 tencentcloud-sdk-nodejs 官方 SDK
+- ✅ 支持 ESM/CommonJS 双模式加载
+
+**接口参数完整**：
+- ✅ ImageToImage 参数：InputImage、Prompt、NegativePrompt、Styles、Strength、RspImgType、LogoAdd、ResultConfig、EnhanceImage、RestoreFace
+- ✅ RefineImage 参数：InputImage、RspImgType
+- ✅ 所有参数符合腾讯云官方 AIART API 要求
+
+**真实返回处理**：
+- ✅ 成功时返回腾讯云 ResultImage（图片 URL）
+- ✅ 记录腾讯云 RequestId 用于问题排查
+- ✅ 错误时转换为用户友好的提示文字
+
+**11 个 Preset 完整覆盖**：
+- ✅ pixel-clean（干净像素风）→ ImageToImage ✅ 真实
+- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage ✅ 真实
+- ✅ cute-cartoon（Q 版卡通）→ ImageToImage ✅ 真实
+- ✅ watercolor（水彩风）→ ImageToImage ✅ 真实
+- ✅ illustration（插画风格）→ ImageToImage ✅ 真实
+- ✅ anime-soft（柔和动漫风）→ ImageToImage ✅ 真实
+- ✅ clean-background（清理杂乱背景）→ ImageToImage ✅ 真实
+- ✅ remove-background（背景简化）→ ImageToImage ✅ 真实
+- ✅ color-optimize（颜色优化）→ ImageToImage ✅ 真实
+- ✅ reduce-noise（减少杂色）→ ImageToImage ✅ 真实
+- ✅ enhance-clarity（提高清晰度）→ RefineImage ✅ 真实
+
+**错误处理完善**：
+- ✅ 缺少密钥：提示检查 server/.env.local
+- ✅ 鉴权失败：提示检查 SecretId/SecretKey
+- ✅ 权限不足：提示检查腾讯云控制台和 CAM 授权
+- ✅ 欠费：提示检查账户状态
+- ✅ 审核失败：提示更换图片或调整描述
+- ✅ 限流：提示稍后再试
+- ✅ 参数错误：提示图片格式/大小/分辨率问题
+
+**次数扣除规则**：
+- ✅ 腾讯云真实返回后才扣次数
+- ✅ 失败不扣次数
+- ✅ 缺 Key 不扣次数
+- ✅ 权限错误不扣次数
+
+**安全特性**：
+- ✅ API Key 仅在 server/.env.local
+- ✅ 前端代码中零 Key 暴露
+- ✅ 日志不打印完整 Key 和 base64 图片
+- ✅ RequestId 打印用于问题排查（不含敏感信息）
+
+### 📊 与 v0.7.3 的对比
+
+| 功能 | v0.7.3 | v0.7.4 |
+|------|--------|--------|
+| Provider 框架 | ✅ | ✅ |
+| 真实 SDK 调用 | ❌ | ✅ |
+| ImageToImage 调用 | ❌ (TODO) | ✅ |
+| RefineImage 调用 | ❌ (TODO) | ✅ |
+| 返回真实 ResultImage | ❌ (mock URL) | ✅ |
+| 腾讯云 RequestId 支持 | ❌ | ✅ |
+| 完整错误映射 | ✅ | ✅ |
+| 次数只在成功后扣 | ✅ (逻辑) | ✅ (真实) |
+
+### 🔧 关键代码变更
+
+**tencentHunyuanProvider.ts**：
+- 移除了所有 TODO 注释和占位实现
+- 实现了 `handleImageToImage()` 真实 SDK 调用
+- 实现了 `handleRefineImage()` 真实 SDK 调用
+- 使用 `tencentcloud-sdk-nodejs` 的 `aiart.v20221229.Client`
+- 完整的参数构造和响应处理
+
+### 📋 后续版本计划
+
+无新的 TODO 项。v0.7.4 已经完整实现了腾讯混元 SDK 集成。
+
+后续可考虑（v0.8+）：
+- 其他 Provider（火山引擎、阿里云、OpenAI）
+- 用户认证和速率限制
+- 成本监控和告警
+- 调用日志记录
+- 图片本地缓存
+
+---
+
+## v0.7.3-tencent-hunyuan-provider - 2026-06-07
+
+### 🎯 版本目标
+
+在 v0.7.2 真实 AI adapter 架构基础上，完成腾讯混元 AI Provider 的框架和配置准备。为真实 SDK 接入（v0.7.4）奠定基础。
+
+**⚠️ 重要说明**：当前版本为 Provider 框架和占位实现，还**没有真正调用腾讯云 SDK**。真实 SDK 集成将在 v0.7.4 完成。
+
+### ✨ 核心功能
+
+**腾讯混元 Provider 框架**：
+- ✅ 新增 tencentHunyuanProvider.ts 服务类（框架完整，SDK 待实现）
+- ✅ 支持 ImageToImage 接口框架（需在 v0.7.4 实现真实调用）
+- ✅ 支持 RefineImage 接口框架（需在 v0.7.4 实现真实调用）
+- ✅ 根据 preset 自动选择接口（enhance-clarity → RefineImage，其他 → ImageToImage）
+
+**Prompt 和 Style 映射**：
+- ✅ tencentHunyuanPromptMap.ts - 10 个 preset 对应的中文提示词映射
+- ✅ tencentHunyuanStyleMap.ts - preset 到腾讯风格 ID 的映射
+- ✅ 包含风格化、图片处理等所有 preset 的提示词
+
+**Preset 接口映射**（框架）：
+- ✅ pixel-clean（干净像素风）→ ImageToImage 框架
+- ✅ bead-pattern（拼豆图纸优化）→ ImageToImage 框架
+- ✅ cute-cartoon（Q 版卡通）→ ImageToImage 框架
+- ✅ watercolor（水彩风）→ ImageToImage 框架
+- ✅ illustration（插画风格）→ ImageToImage 框架
+- ✅ anime-soft（柔和动漫风）→ ImageToImage 框架
+- ✅ clean-background（清理杂乱背景）→ ImageToImage 框架
+- ✅ remove-background（背景简化）→ ImageToImage 框架（非透明抠图）
+- ✅ color-optimize（颜色优化）→ ImageToImage 框架
+- ✅ reduce-noise（减少杂色）→ ImageToImage 框架
+- ✅ enhance-clarity（提高清晰度）→ RefineImage 框架
+
+**后端改进**：
+- ✅ 后端路由支持 runtime mode 和 provider 检测
+- ✅ 腾讯混元密钥缺失检测和用户友好错误提示
+- ✅ 错误处理覆盖：密钥缺失、权限不足、余额不足、图片过大、审核失败、并发超限
+- ✅ 后端日志记录 AI provider、preset、图片大小、请求状态
+
+**前端改进**：
+- ✅ AiStyleImageUploader 保存 base64 数据供后端调用（准备用于 v0.7.4 真实 API 调用）
+- ✅ AiStylePanel 显示腾讯混元相关信息
+- ✅ AiStylePanel 为"去除背景"添加"背景简化"说明
+- ✅ AiStylePanel 按钮文本动态切换（mock 模式："模拟生成"，real 模式："开始 AI 优化"）
+- ✅ 结果预览区支持显示图片（当前为 mock URL）
+
+**环境变量和配置**：
+- ✅ .env.example 新增腾讯混元专用环境变量
+- ✅ 支持 TENCENT_REGION, TENCENT_AIART_ENDPOINT, TENCENT_AIART_VERSION 自定义
+- ✅ 前后端配置分离，API Key 仅在后端存储
+
+**文档完善**：
+- ✅ docs/TENCENT_HUNYUAN_SETUP.md 完整设置指南（16 章节）
+  - 服务开通确认
+  - API 密钥创建
+  - CAM 权限配置
+  - 环境变量配置
+  - 后端启动方法
+  - 前端测试流程
+  - 常见错误排查（7 种常见问题）
+  - 监控和日志
+  - 支持的 Preset 列表
+  - 最佳实践和成本优化
+  - FAQ
+
+### 🔧 后端文件结构
+
+```
+server/
+├── services/
+│   ├── providers/
+│   │   └── tencentHunyuanProvider.ts        # 腾讯混元 AI Provider
+│   └── promptMaps/
+│       ├── tencentHunyuanPromptMap.ts       # 提示词映射
+│       └── tencentHunyuanStyleMap.ts        # 风格 ID 映射
+└── routes/
+    └── aiStyle.ts                            # 更新以支持腾讯混元
+```
+
+### 🔐 安全特性
+
+- ✅ API Key 仅在 server/.env.local（未跟踪）
+- ✅ 前端代码中无任何 API Key
+- ✅ base64 图片不写入日志
+- ✅ 错误信息不暴露敏感细节
+- ✅ 后端响应标准化，隐藏腾讯原始字段
+
+### ⚙️ 环境变量配置示例
+
+```bash
+# 前端 (VITE_*)
+VITE_AI_RUNTIME_MODE=real
+VITE_AI_PROVIDER=tencent-hunyuan
+VITE_API_BASE_URL=http://localhost:3001
+
+# 后端 (server/.env.local，不提交)
+TENCENT_SECRET_ID=AKID...
+TENCENT_SECRET_KEY=wl6F...
+TENCENT_REGION=ap-guangzhou
+TENCENT_AIART_ENDPOINT=aiart.tencentcloudapi.com
+TENCENT_AIART_VERSION=2022-12-29
+```
+
+### 📝 修改文件列表
+
+**新增文件**：
+- `server/services/providers/tencentHunyuanProvider.ts`
+- `server/services/promptMaps/tencentHunyuanPromptMap.ts`
+- `server/services/promptMaps/tencentHunyuanStyleMap.ts`
+- `docs/TENCENT_HUNYUAN_SETUP.md`
+
+**修改文件**：
+- `server/package.json` - 添加 tencentcloud-sdk-nodejs 依赖（预留）
+- `server/routes/aiStyle.ts` - 支持调用腾讯混元 provider
+- `src/types/aiStyle.ts` - 添加 base64 字段
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 保存 base64 数据
+- `src/components/UserCenter/AiStylePanel.tsx` - 显示腾讯混元信息、背景简化说明、动态按钮文本
+- `src/hooks/useAiStyle.ts` - 处理结果图片 URL
+- `.env.example` - 腾讯混元专用环境变量
+- `package.json` - 版本号更新到 0.7.3
+- `CHANGELOG.md` - 本条目
+
+### ✅ 验证清单
+
+- [x] tencentHunyuanProvider.ts 实现完整
+- [x] 支持 ImageToImage 和 RefineImage 两个接口
+- [x] Prompt 映射覆盖所有 preset
+- [x] 后端路由集成腾讯混元 provider
+- [x] 环境变量配置完善
+- [x] 前端支持 base64 数据传输
+- [x] 错误处理完善（密钥、权限、余额、审核、并发）
+- [x] AiStylePanel 显示运行模式和服务商
+- [x] 去除背景 preset 有"背景简化"说明
+- [x] 结果预览区支持显示真实图片
+- [x] 腾讯混元设置指南完成
+- [x] npm run build 通过
+- [x] 原有图纸转换功能不受影响
+- [x] Mock 模式回归测试通过
+- [x] API Key 仅在后端使用
+
+### 🔄 版本对比
+
+| 功能 | v0.7.2 | v0.7.3 |
+|-----|--------|--------|
+| Mock Provider | ✅ | ✅ |
+| Real Provider 架构 | ✅ | ✅ |
+| 腾讯混元 Provider | ❌ | ✅ |
+| ImageToImage 接口 | ❌ | ✅ |
+| RefineImage 接口 | ❌ | ✅ |
+| Prompt 映射 | ❌ | ✅ |
+| Style 映射 | ❌ | ✅ |
+| 腾讯混元文档 | ❌ | ✅ |
+
+### 📋 后续任务（关键：当前 v0.7.3 还不能真实调用）
+
+1. **真实腾讯 SDK 集成** (v0.7.4) - 必做
+   - ⚠️ 当前 callTencentImageToImage() 和 callTencentRefineImage() 是 TODO 占位
+   - 需要导入 tencentcloud-sdk-nodejs
+   - 实现完整的 ImageToImage API 调用
+   - 实现完整的 RefineImage API 调用
+   - 处理 base64 编码和 Strength 转换
+   - 验证返回结果的 resultImageUrl
+
+2. **其他 Provider** (v0.8)
+   - 火山引擎（Volcengine）接入
+   - 阿里云（Aliyun）接入
+   - OpenAI 接入
+
+3. **高级功能** (v0.9)
+   - 用户认证和速率限制
+   - 成本监控和告警
+   - 调用日志记录
+
+---
+
+## v0.7.2-real-ai-adapter-poc - 2026-06-07
+
+### 🎯 版本目标
+
+搭建真实 AI 接入的"准备层"和"最小调用闭环"，保留现有 mock 功能，新增 real provider 接入结构。支持环境变量动态切换 mock/real 模式。
+
+### ✨ 核心功能
+
+**后端代理服务**：
+- ✅ Express Node.js 后端服务 (server/index.ts)
+- ✅ POST /api/ai-style/generate 端点
+- ✅ 图片大小验证 (5MB 限制)
+- ✅ 图片格式验证 (JPG/PNG/WEBP)
+- ✅ 后端错误处理和返回标准化响应
+
+**AI Provider 工厂模式**：
+- ✅ aiRuntimeConfig.ts - 环境变量配置读取
+- ✅ aiProviderFactory.ts - 工厂函数 getAiProvider()
+- ✅ aiProviderTypes.ts - 统一的 Request/Result 接口
+- ✅ aiMockProvider.ts - Mock 提供者适配器
+- ✅ aiRealProvider.ts - 真实提供者适配器（POST 到后端代理）
+
+**前端改进**：
+- ✅ AiStyleImageUploader 添加 5MB 大小限制检查
+- ✅ AiStylePanel 显示当前运行模式和服务商
+- ✅ useAiStyle hook 集成 provider 工厂函数
+- ✅ 所有前端代码中无 API Key（安全原则）
+
+**安全文档**：
+- ✅ docs/AI_API_SECURITY.md - 安全检查清单和最佳实践
+- ✅ docs/AI_PROVIDER_RESEARCH.md - 4 大 AI 服务商对比分析
+
+**配置模板**：
+- ✅ .env.example - 所有必需的环境变量模板
+
+### 🔧 环境变量配置
+
+```bash
+# 运行模式
+VITE_AI_RUNTIME_MODE=mock              # 'mock' 或 'real'
+VITE_AI_PROVIDER=mock                  # 'mock' / 'tencent-hunyuan' / ...
+VITE_API_BASE_URL=http://localhost:3001
+
+# 后端配置（仅在 server/.env.local）
+TENCENT_SECRET_ID=xxx
+TENCENT_SECRET_KEY=xxx
+VOLCENGINE_API_KEY=xxx
+ALIYUN_DASHSCOPE_API_KEY=xxx
+OPENAI_API_KEY=xxx
+```
+
+### 📁 新增文件
+
+**后端服务**：
+- `server/index.ts` - Express 应用入口
+- `server/routes/aiStyle.ts` - AI 风格化路由
+- `server/package.json` - 后端依赖
+- `server/tsconfig.json` - 后端 TypeScript 配置
+
+**AI 服务层**：
+- `src/services/ai/aiRuntimeConfig.ts` - 运行时配置管理
+- `src/services/ai/aiProviderTypes.ts` - 接口定义
+- `src/services/ai/aiProviderFactory.ts` - 工厂函数
+- `src/services/ai/aiMockProvider.ts` - Mock 适配器
+- `src/services/ai/aiRealProvider.ts` - 真实适配器
+
+**文档**：
+- `docs/AI_API_SECURITY.md` - 安全指南（8 大检查项）
+- `docs/AI_PROVIDER_RESEARCH.md` - 服务商研究报告
+- `.env.example` - 环境变量模板
+
+### 🔄 修改文件
+
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 添加 5MB 检查
+- `src/components/UserCenter/AiStylePanel.tsx` - 显示运行模式信息
+- `src/hooks/useAiStyle.ts` - 使用 provider 工厂函数
+- `src/services/ai/aiRuntimeConfig.ts` - 移除前端 API Key 检查
+- `package.json` - 版本号更新到 0.7.2
+
+### ⚙️ 后端启动方式
+
+```bash
+# 进入 server 目录
+cd server
+
+# 安装依赖
+npm install
+
+# 开发模式（自动重载）
+npm run dev
+
+# 生产模式
+npm run build
+npm start
+```
+
+### 🔐 安全检查清单
+
+- [x] 前端代码中不存在任何 API Key
+- [x] API Key 只配置在 server/.env.local
+- [x] 后端代理验证图片大小和格式
+- [x] 后端错误处理不暴露内部实现细节
+- [x] 所有 API 调用都通过后端代理进行
+- [x] 环境变量通过 .env.example 模板文档化
+
+### ✅ 验证清单
+
+- [x] 后端代理服务启动成功
+- [x] POST /api/ai-style/generate 端点工作正常
+- [x] 图片大小限制 (5MB) 实现
+- [x] 图片格式验证 (JPG/PNG/WEBP) 实现
+- [x] Provider 工厂函数工作正常
+- [x] AiStylePanel 显示运行模式
+- [x] npm run build 通过
+- [x] npm run lint 通过
+- [x] 原有 mock 功能保留完整
+
+### 📝 后续任务
+
+1. **完整的真实 AI 集成**（v0.8）
+   - 实现腾讯混元真实调用代码（推荐）
+   - 添加用户认证中间件
+   - 实现速率限制和计费逻辑
+
+2. **监控和日志**（v0.9）
+   - 后端 API 调用日志
+   - 成本监控告警
+   - 错误率监控
+
+3. **CI/CD 优化**（v1.0）
+   - GitHub Actions 配置
+   - API Key 安全管理
+   - 自动化部署流程
+
+---
+
+## v0.7.1-ai-style-panel-fix - 2026-06-07
+
+### 🔧 修复内容
+
+**AI 优化页面改进**：
+- ✅ 新增独立图片上传窗口（支持点击和拖拽）
+- ✅ 支持 JPG / PNG / WEBP 格式
+- ✅ 图片预览、文件名、尺寸显示
+- ✅ 支持重新上传和清空图片
+- ✅ 支持两种图片来源：
+  - 工作台图片直接使用
+  - 或在优化页单独上传
+
+**风格选项可用性修复**：
+- ✅ 所有预设选项都可点击（不再灰掉）
+- ✅ 去除背景、清理背景等处理预设启用
+- ✅ 权限和次数不足时显示清晰提示
+- ✅ 分离显示"图片处理"和"风格转换"两类预设
+
+**生成流程改进**：
+- ✅ 新增图片处理预设（5 个）
+  - 去除背景 (free)
+  - 清理杂乱背景 (free)
+  - 提高清晰度 (member)
+  - 颜色优化 (member)
+  - 减少杂色 (member)
+- ✅ 改进 mock 结果显示
+- ✅ 添加生成结果预览区
+- ✅ 明确提示 mock 模式
+
+### 📊 类型定义更新
+
+```ts
+// 新增图片处理类型
+type AiProcessPreset =
+  | 'remove-background'
+  | 'clean-background'
+  | 'enhance-clarity'
+  | 'color-optimize'
+  | 'reduce-noise'
+
+// 图片源定义
+interface AiStyleSourceImage {
+  id: string
+  name: string
+  type: string
+  size: number
+  width?: number
+  height?: number
+  previewUrl: string
+  createdAt: string
+}
+
+// 预设配置
+interface AiStylePresetConfig {
+  id: AiPreset
+  name: string
+  description: string
+  suitableFor: string
+  isMemberOnly: boolean
+  creditCost: number
+  category: 'process' | 'style'  // 新增
+}
+```
+
+### 📁 新增文件
+
+- `src/components/UserCenter/AiStyleImageUploader.tsx` - 图片上传组件
+
+### 🔄 修改文件
+
+- `src/types/aiStyle.ts` - 新增类型定义
+- `src/services/mock/aiStyleMockService.ts` - 新增处理预设
+- `src/components/UserCenter/AiStylePanel.tsx` - 完全重写
+- `src/hooks/useAiStyle.ts` - 更新函数签名
+- `src/components/UserCenter/index.tsx` - 更新调用方式
+- `src/App.tsx` - 传递工作台图片
+
+### ✅ 验证清单
+
+- [x] AI 优化页面有独立上传窗口
+- [x] 支持 JPG/PNG/WEBP 格式
+- [x] 去除背景可点击
+- [x] 其他风格选项可点击
+- [x] 未登录时有提示
+- [x] 会员专属功能有提示
+- [x] AI 次数不足有提示
+- [x] npm run build 通过
+- [x] 原有功能不受影响
+
+---
+
+## v0.7.0-ai-style-mock - 2026-06-07
+
+### 🎯 版本目标
+
+本版本为后续商业化功能搭建"骨架"和"接口层"，不接入真实服务（支付、微信、AI API、数据库）。
+
+### ✨ 新增功能
+
+**Mock 服务层**：
+- ✅ 登录 mock 服务 - 支持模拟登录/退出
+- ✅ 会员系统 mock - 支持 free/monthly/yearly/lifetime 四个等级
+- ✅ AI 次数 mock - 支持每日次数限制、额外赠送、重置
+- ✅ AI 风格化 mock 服务 - 8 个预设风格，支持会员权限校验
+- ✅ 兑换码 mock - 3 个测试兑换码，防止重复使用
+- ✅ 我的作品 mock - 支持保存/删除/重命名作品元数据
+- ✅ 小程序入口占位
+
+**用户中心 UI**：
+- ✅ 综合用户中心面板（5 个 Tab）
+- ✅ 用户状态展示与模拟登录
+- ✅ 会员等级切换模拟
+- ✅ AI 次数消耗与重置
+- ✅ 兑换码输入与验证
+- ✅ 作品列表管理
+- ✅ AI 风格化预设展示与测试
+
+**架构设计**：
+- ✅ 分层设计：services/mock/ + hooks + components
+- ✅ localStorage 数据持久化
+- ✅ 清晰的接口层，便于后续接入真实腾讯云 API
+- ✅ 浮动按钮入口（工作台右下角）
+
+### 📊 localStorage 使用的 key
+
+```
+dora_auth_user
+dora_membership_<userId>
+dora_ai_credits_<userId>
+dora_ai_style_history_<userId>
+dora_user_works_<userId>
+dora_redeem_history_<userId>
+```
+
+### 🔍 核心逻辑
+
+**登录流程**：
+- 游客状态 → 模拟登录 → 已登录状态
+- 支持退出登录恢复游客状态
+
+**会员系统**：
+- Free: 3 次/日，3 个作品
+- Monthly: 50 次/日，100 个作品，高清导出
+- Yearly: 200 次/日，1000 个作品，批量导出
+- Lifetime: 无限次数，无限作品，全功能
+
+**AI 风格化**：
+- 8 个预设风格（2 个免费，6 个会员）
+- 点击预设 → 检查权限 → 检查次数 → 消耗次数 → 返回 mock 结果
+- 支持 500-1000ms 处理延迟（模拟网络）
+
+**兑换码**：
+- DORA-VIP-30：30 天月会员
+- DORA-AI-100：100 次额外次数
+- DORA-TEST-999：永久会员
+- 防重复使用，历史记录保存
+
+**我的作品**：
+- 保存作品元数据（名称、尺寸、品牌、颜色数、豆数）
+- 删除、重命名、查看详情
+- 注：暂不保存完整图纸数据
+
+### ✅ 不破坏的现有功能
+
+- ✅ 首页与功能卡
+- ✅ 图片上传与转换
+- ✅ 图纸编辑（画笔、擦除、填充、吸色）
+- ✅ 颜色高亮 / 替换 / 删除
+- ✅ 图纸导出（带水印）
+- ✅ 预览与统计
+- ✅ 当前工作台布局与主题色
+
+### 🏗️ 代码结构
+
+```
+src/
+  services/mock/
+    authMockService.ts          ← 登录 mock
+    membershipMockService.ts    ← 会员 mock
+    creditsMockService.ts       ← AI 次数 mock
+    aiStyleMockService.ts       ← AI 风格化 mock
+    worksMockService.ts         ← 作品管理 mock
+    redeemCodeMockService.ts    ← 兑换码 mock
+  
+  types/
+    aiStyle.ts                  ← AI 风格化类型定义
+    work.ts                     ← 作品类型定义
+  
+  hooks/
+    useAuth.ts
+    useMembership.ts
+    useCredits.ts
+    useAiStyle.ts
+    useRedeemCode.ts
+    useWorks.ts
+  
+  components/UserCenter/
+    index.tsx                   ← 主面板（5 个 Tab）
+    UserStatusCard.tsx
+    MembershipCard.tsx
+    CreditsCard.tsx
+    AiStylePanel.tsx
+    RedeemCodePanel.tsx
+    MyWorksPanel.tsx
+```
+
+### 🧪 测试兑换码
+
+在用户中心的"兑换码"Tab 中测试：
+
+```
+DORA-VIP-30    → 升级月会员
+DORA-AI-100    → 获得 100 次额外 AI
+DORA-TEST-999  → 升级为永久会员
+```
+
+### 📝 后续接入建议
+
+**v0.8.0**：
+- 替换 mock services 为真实腾讯云 API
+- 集成真实用户认证（微信小程序登录）
+- 集成真实数据库存储
+
+**无需改动**：
+- 所有 hooks 保持不变
+- 所有 UI 组件无需改动
+- 应用状态管理无需改动
+
+只需替换 src/services/mock/ 目录下的服务实现即可。
+
+### ✨ 特别说明
+
+- 所有 mock 数据已明确标注"当前为 mock 模式"
+- 所有 mock 服务都有返回类型定义，便于日后替换
+- localStorage 数据可通过浏览器开发工具查看
+- 刷新页面后数据仍保留（localStorage 持久化）
+
+---
+
+## v0.6.4-local-stable - 2026-06-07
+
+### 发布状态
+
+✅ **本地功能已跑通** - 所有核心功能在本地开发环境验证通过
+⏳ **待公网部署** - 项目已准备好部署到 Cloudflare Pages，暂未部署
+
+### 本版本包含
+
+- v0.6.3 所有补丁修复（6 个补丁）
+- v0.6.4 回归测试清单完整
+- TypeScript 编译修复
+- Cloudflare Pages 部署文档生成
+- 项目构建成功（npm run build）
+
+### 主要功能清单
+
+✅ 首页入口 - 四个功能卡，主题色联动  
+✅ 图片上传 - JPG/PNG 支持  
+✅ 图片裁剪 - 多点拖拽裁剪框  
+✅ 图纸生成 - AI 优化、像素化、拼豆转换  
+✅ 工作台编辑 - 画笔、擦除、填充、吸色  
+✅ 颜色工具 - 高亮、替换、删除颜色  
+✅ 导出功能 - PNG 导出带水印  
+✅ 统计报告 - 豆数、色号、损耗预估  
+✅ 多品牌支持 - BOZLES、Pixel Pals 等  
+
+### 已知限制
+
+- 水印仅在导出 PNG 时显示（预览中不可见，符合产品设计）
+- 颜色高亮为本地 UI 状态，不修改图纸数据
+- 缩放控制保留在编辑工具栏（响应式设计）
+
+### 部署信息
+
+- **构建产物**：`dist/` 目录（492 KB gzipped）
+- **部署工具**：已生成 Cloudflare Pages 部署指南
+- **推荐部署**：Cloudflare Pages（自动 CI/CD）
+
+### 验收文档
+
+- `REGRESSION_TEST_v0.6.4.md` - 13 模块回归测试清单
+- `CLOUDFLARE_PAGES_DEPLOYMENT.md` - 部署步骤指南
+- `PATCH_REPORT_v063_*.md` - 各补丁详细说明
+
+---
+
+## v0.6.3-editor-color-tools-behavior-fix - 2026-06-07
+
+### 本次更新
+
+* 修复编辑页"颜色高亮 / 替换颜色"按钮灰色不可用的问题
+* 恢复颜色高亮工具的可用状态
+* 恢复替换颜色工具的可用状态
+* 明确区分"吸色"和"颜色高亮"两个动作：
+  * 吸色只用于选择当前画笔颜色
+  * 吸色后不再自动让其他颜色变灰
+  * 颜色高亮改为独立开关，由用户主动开启或关闭
+* 修复"替换颜色"无法激活的问题
+* 替换颜色流程恢复为：选择源颜色 → 选择目标颜色 → 执行替换
+* 替换完成后同步更新图纸预览与颜色统计
+* 确认没有误恢复或新增"合并颜色"功能
+
+### Files Changed
+
+- `src/components/EditorToolbar/index.tsx` - 修复颜色工具按钮启用状态
+
+### 涉及范围
+
+* 编辑页颜色工具栏
+* 吸色工具状态逻辑
+* 颜色高亮状态逻辑
+* 替换颜色流程逻辑
+* 图纸预览与颜色统计同步更新
+
+### Notes
+
+* 颜色高亮按钮可用
+* 替换颜色按钮可用
+* 吸色后图纸保持全彩显示
+* 主动开启颜色高亮后才高亮当前颜色
+* 替换颜色可正常执行
+* 替换后统计同步更新
+* 构建通过
+* 未修改首页视觉
+* 未接入腾讯云混元、CloudBase、COS
+* 未修改登录、会员、支付相关逻辑
+
+---
+
+## v0.6.2-workspace-mode-themes - 2026-06-07
+
+### Added
+
+- **工作台模式主题色联动**：首页四个功能卡进入工作台后，工作台外围背景会根据入口模式切换为对应主题色
+  - 新增统一模式主题配置文件：`src/config/modeThemes.ts`
+  - 四个模式分别对应柔和的背景梯度：粉色、橙色、绿色、紫色
+- **工作台侧边栏改进**：
+  - 顶部显示当前模式提示胶囊（模式名 + 主题色）
+  - 导入模式选择按钮根据当前模式使用对应主题色
+  - 预处理按钮 hover 状态使用当前模式主题色
+
+### Changed
+
+- **首页底部 slogan 文案更新**：
+  - 原文案：「让每一颗拼豆，都更有创意与温度」
+  - 新文案：「以拼豆为笔，让每颗像素都藏着创意与温度」
+  - 字号调整以适应新文案长度
+
+### Files Changed
+
+- `src/config/modeThemes.ts` - 新增统一模式主题配置
+- `src/App.tsx` - 工作台主题色联动实现
+- `src/components/HomePage/index.tsx` - 首页 slogan 文案修改
+
+### Notes
+
+- 工作台核心操作区保持白底清晰设计，仅外围背景应用梯度色
+- 不影响上传、转图纸、编辑、导出等核心功能
+- 未接入腾讯云混元、CloudBase、COS
+- 未修改登录、会员、兑换码相关逻辑
+- TypeScript 构建通过，lint 存在预存错误（工作台编辑器旧代码，非本次修改引入）
+
+### Mode Theme Mapping
+
+- `photo-direct`：粉色主题（图片直转图纸）
+- `ai-enhanced`：橙色主题（AI 优化后转图纸）
+- `pixel-grid`：绿色主题（像素图转色号）
+- `existing-pattern`：紫色主题（现有图纸再编辑）
+
+---
+
+## v0.6.1-home-feature-cards-clean - 2026-06-07
+
+### Changed
+
+- **首页功能卡区域重构**：完成了首页四个功能卡的完整重构与修复
+  - 替换四张功能卡为"干净版底图"（删除了旧底图中的标签框和小箭头）
+  - 右上角标签胶囊改为由前端代码统一渲染，支持主题色动态背景
+  - 右下角大圆形箭头按钮改为由前端代码统一渲染，位置和尺寸统一
+
+### Fixed
+
+- 修复功能卡图标、标签、箭头重叠问题
+  - 移除了旧底图中右上角标签底框导致的错位
+  - 移除了旧底图中右下角小箭头导致的叠加
+  - 无双层箭头、无遮盖补丁逻辑
+
+### Files Changed
+
+- `src/components/HomePage/index.tsx` - 功能卡数据结构和样式渲染
+- `src/components/AppHeader/index.tsx` - 导航栏样式更新（与首页设计一致）
+- `public/assets/home/` - 四张新的干净版功能卡底图
+
+### Notes
+
+- 保持首页 Hero、顶部导航、底部 slogan 区域不变
+- 工作台、上传、转图纸、色号匹配、导出等核心业务逻辑未修改
+- 未接入腾讯云混元、CloudBase、COS
+
+---
+
 ## v0.4.3 - 2026-06-04（快速回到整体页、空格平移、水印密度减半）
 
 ### Changed

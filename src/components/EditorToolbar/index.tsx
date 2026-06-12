@@ -9,13 +9,10 @@ interface EditorToolbarProps {
   highlightColorCode: string | null
   fillThreshold: number
   onFillThresholdChange: (v: number) => void
-  zoom: number
-  onZoomChange: (v: number) => void
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
-  onClearHighlight: () => void
   onClearSelection: () => void
   hasSelection: boolean
   onInvertSelection: () => void
@@ -39,192 +36,149 @@ const TOOL_ICONS: Record<EditorTool, string> = {
   'fill-erase': '🗑️',
 }
 
-const ZOOM_LEVELS = [1, 1.5, 2, 3, 4]
-
 export function EditorToolbar({
   activeTool, onToolChange,
   activeColor, highlightColorCode,
   fillThreshold, onFillThresholdChange,
-  zoom, onZoomChange,
   canUndo, canRedo, onUndo, onRedo,
-  onClearHighlight,
   hasSelection, onClearSelection, onInvertSelection,
   onHighlightActiveColor, onStartReplaceActiveColor, onDeleteActiveColor,
   showCellCodes, onToggleCellCodes,
 }: EditorToolbarProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">编辑工具</p>
+    <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 overflow-x-auto">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">编辑工具</p>
 
-      {/* Tool grid */}
-      <div className="grid grid-cols-3 gap-1">
+      {/* Tool buttons (horizontal) */}
+      <div className="flex gap-1">
         {TOOLS.map(tool => (
           <button
             key={tool}
             onClick={() => onToolChange(tool)}
             title={TOOL_LABELS[tool]}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-1 rounded border text-xs transition-colors ${
+            className={`flex items-center gap-1 py-1 px-2 rounded border text-xs transition-colors shrink-0 ${
               activeTool === tool
                 ? 'bg-blue-500 text-white border-blue-500'
                 : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
             }`}
           >
-            <span className="text-base leading-none">{TOOL_ICONS[tool]}</span>
-            <span className="text-[10px] leading-tight">{TOOL_LABELS[tool]}</span>
+            <span className="text-sm leading-none">{TOOL_ICONS[tool]}</span>
+            <span className="hidden sm:inline text-[10px]">{TOOL_LABELS[tool]}</span>
           </button>
         ))}
       </div>
 
-      {/* Current color + quick actions */}
-      <div className="bg-gray-50 rounded border border-gray-200 p-2 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 shrink-0">当前颜色</span>
-          {activeColor ? (
-            <>
-              <div
-                className="w-6 h-6 rounded border border-gray-300 shrink-0"
-                style={{ backgroundColor: activeColor.hex }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-mono text-gray-800 truncate">{activeColor.code}</p>
-                {activeColor.name !== activeColor.code && (
-                  <p className="text-[10px] text-gray-400 truncate">{activeColor.name}</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <span className="text-xs text-gray-400">未选择（用吸色器或色板选择）</span>
-          )}
+      {/* Current color display */}
+      {activeColor && (
+        <div className="flex items-center gap-2 px-2 border-l border-gray-300">
+          <span className="text-xs text-gray-500 shrink-0">当前色</span>
+          <div
+            className="w-5 h-5 rounded border border-gray-300 shrink-0"
+            style={{ backgroundColor: activeColor.hex }}
+            title={activeColor.name}
+          />
+          <span className="text-xs font-mono text-gray-600 shrink-0">{activeColor.code}</span>
         </div>
+      )}
 
-        {/* Quick actions — only when a color is selected */}
-        {activeColor && (
-          <div className="flex gap-1">
-            <button
-              onClick={onHighlightActiveColor}
-              title="高亮全图该颜色所有格子"
-              className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
-                highlightColorCode === activeColor.code
-                  ? 'bg-yellow-400 text-yellow-900 border-yellow-400'
-                  : 'border-gray-300 text-gray-600 hover:border-yellow-400 hover:text-yellow-700'
-              }`}
-            >
-              {highlightColorCode === activeColor.code ? '✦ 高亮中' : '◈ 高亮'}
-            </button>
-            <button
-              onClick={onStartReplaceActiveColor}
-              title="将全图该颜色替换为另一颜色"
-              className="flex-1 py-1 text-[10px] rounded border border-gray-300 text-gray-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
-            >
-              ⇄ 替换
-            </button>
-            <button
-              onClick={onDeleteActiveColor}
-              title="删除全图该颜色（可撤销）"
-              className="flex-1 py-1 text-[10px] rounded border border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600 transition-colors"
-            >
-              ✕ 删除
-            </button>
-          </div>
-        )}
+      {/* Color tools - enabled when in edit mode, even without active color selected */}
+      <div className="flex gap-1 px-2 border-l border-gray-300">
+        <button
+          onClick={onHighlightActiveColor}
+          disabled={false}
+          title={activeColor ? `高亮全图该颜色 (${activeColor.code})` : '吸取或选择一个颜色后可高亮'}
+          className={`py-1 px-2 text-[10px] rounded border transition-colors shrink-0 ${
+            activeColor && highlightColorCode === activeColor.code
+              ? 'bg-yellow-400 text-yellow-900 border-yellow-400'
+              : activeColor
+              ? 'border-gray-300 text-gray-600 hover:border-yellow-400'
+              : 'border-gray-300 text-gray-400'
+          }`}
+        >
+          {activeColor && highlightColorCode === activeColor.code ? '✦ 高亮中' : '◈ 高亮'}
+        </button>
+        <button
+          onClick={onStartReplaceActiveColor}
+          disabled={false}
+          title={activeColor ? `替换 ${activeColor.code}` : '吸取或选择一个颜色后可替换'}
+          className={`py-1 px-2 text-[10px] rounded border transition-colors shrink-0 ${
+            activeColor
+              ? 'border-gray-300 text-gray-600 hover:border-amber-400'
+              : 'border-gray-300 text-gray-400'
+          }`}
+        >
+          ⇄ 替换
+        </button>
+        <button
+          onClick={onDeleteActiveColor}
+          disabled={false}
+          title={activeColor ? `删除 ${activeColor.code}` : '吸取或选择一个颜色后可删除'}
+          className={`py-1 px-2 text-[10px] rounded border transition-colors shrink-0 ${
+            activeColor
+              ? 'border-gray-300 text-gray-600 hover:border-red-400'
+              : 'border-gray-300 text-gray-400'
+          }`}
+        >
+          ✕ 删除
+        </button>
       </div>
 
-      {/* Highlight banner */}
-      {highlightColorCode && (
-        <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
-          <span className="text-xs text-yellow-800 font-medium">高亮: {highlightColorCode}</span>
-          <button onClick={onClearHighlight} className="text-yellow-600 hover:text-yellow-800 text-xs">✕ 清除</button>
-        </div>
-      )}
+      {/* Undo / Redo */}
+      <div className="flex gap-1 px-2 border-l border-gray-300">
+        <button onClick={onUndo} disabled={!canUndo}
+          className={`py-1 px-2 text-xs rounded border transition-colors shrink-0 ${
+            canUndo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
+          }`}
+          title="Ctrl+Z"
+        >↩</button>
+        <button onClick={onRedo} disabled={!canRedo}
+          className={`py-1 px-2 text-xs rounded border transition-colors shrink-0 ${
+            canRedo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
+          }`}
+          title="Ctrl+Y"
+        >↪</button>
+      </div>
 
-      {/* Fill threshold */}
-      {(activeTool === 'fill' || activeTool === 'fill-erase') && (
-        <div>
-          <p className="text-xs text-gray-500 mb-1">
-            填充模式
-            <span className="ml-1 text-gray-700 font-medium">
-              {fillThreshold === 0 ? '精确同色' : `扩展 ${fillThreshold} 步`}
-            </span>
-          </p>
-          <input
-            type="range" min={0} max={3} step={1} value={fillThreshold}
-            onChange={e => onFillThresholdChange(Number(e.target.value))}
-            className="w-full"
-          />
-          <div className="flex justify-between text-[10px] text-gray-400">
-            <span>精确</span><span>扩展</span>
-          </div>
-        </div>
-      )}
-
-      {/* Selection */}
+      {/* Selection actions */}
       {hasSelection && (
-        <div className="flex gap-1">
+        <div className="flex gap-1 px-2 border-l border-gray-300">
           <button
             onClick={onInvertSelection}
-            className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-blue-400 hover:text-blue-600"
+            className="py-1 px-2 text-xs border border-gray-300 rounded hover:border-blue-400 text-gray-600 shrink-0"
           >反选</button>
           <button
             onClick={onClearSelection}
-            className="flex-1 py-1 text-xs border border-gray-300 rounded hover:border-red-400 hover:text-red-600"
-          >取消选区</button>
+            className="py-1 px-2 text-xs border border-gray-300 rounded hover:border-red-400 text-gray-600 shrink-0"
+          >清除</button>
         </div>
       )}
 
-      {/* Undo / Redo with shortcut hint */}
-      <div className="space-y-0.5">
-        <div className="flex gap-1">
-          <button onClick={onUndo} disabled={!canUndo}
-            className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-              canUndo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
-            }`}
-          >↩ 撤销</button>
-          <button onClick={onRedo} disabled={!canRedo}
-            className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-              canRedo ? 'border-gray-300 hover:border-blue-400 text-gray-700' : 'border-gray-200 text-gray-300 cursor-not-allowed'
-            }`}
-          >↪ 重做</button>
+      {/* Fill threshold (compact) */}
+      {(activeTool === 'fill' || activeTool === 'fill-erase') && (
+        <div className="flex items-center gap-2 px-2 border-l border-gray-300">
+          <span className="text-xs text-gray-500 shrink-0">填充</span>
+          <input
+            type="range" min={0} max={3} step={1} value={fillThreshold}
+            onChange={e => onFillThresholdChange(Number(e.target.value))}
+            className="w-20"
+            title={fillThreshold === 0 ? '精确同色' : `扩展 ${fillThreshold} 步`}
+          />
+          <span className="text-xs text-gray-500 shrink-0 w-12">{fillThreshold === 0 ? '精确' : `+${fillThreshold}`}</span>
         </div>
-        <p className="text-[10px] text-gray-400 text-center">
-          Ctrl+Z / Ctrl+Y（Mac: ⌘Z / ⌘Y）
-        </p>
-      </div>
+      )}
 
-      {/* Zoom with shortcut hint */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-gray-500">缩放</p>
-          <span className="text-[10px] text-gray-400">+/− 键 · 0 重置 · 空格平移</span>
-        </div>
-        <div className="flex gap-0.5">
-          {ZOOM_LEVELS.map(z => (
-            <button key={z} onClick={() => onZoomChange(z)}
-              className={`flex-1 py-1 text-[11px] rounded border transition-colors ${
-                zoom === z
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'border-gray-300 text-gray-600 hover:border-blue-400'
-              }`}
-            >
-              {z === 1 ? '1×' : `${z}×`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Display options */}
-      <div>
-        <p className="text-xs text-gray-500 mb-1">显示选项</p>
-        <button
-          onClick={onToggleCellCodes}
-          className={`w-full py-1.5 text-xs rounded border transition-colors ${
-            showCellCodes
-              ? 'bg-blue-50 border-blue-400 text-blue-700'
-              : 'border-gray-300 text-gray-500 hover:border-blue-400'
-          }`}
-        >
-          {showCellCodes ? '色号标注：显示' : '色号标注：隐藏'}
-        </button>
-      </div>
+      {/* Cell codes toggle */}
+      <button
+        onClick={onToggleCellCodes}
+        className={`ml-auto py-1 px-2 text-xs rounded border transition-colors shrink-0 ${
+          showCellCodes
+            ? 'bg-blue-50 border-blue-400 text-blue-700'
+            : 'border-gray-300 text-gray-500 hover:border-blue-400'
+        }`}
+        title={showCellCodes ? '隐藏色号' : '显示色号'}
+      >
+        {showCellCodes ? '色号:ON' : '色号:OFF'}
+      </button>
     </div>
   )
 }
