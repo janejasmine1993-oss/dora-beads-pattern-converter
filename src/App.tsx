@@ -25,7 +25,7 @@ import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
 type AppPage = 'home' | 'workspace' | 'ai-optimize'
 type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | null
-import { TRANSPARENT_COLOR } from './types/pattern'
+import { TRANSPARENT_COLOR, type PixelDesignGrid } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
 import { cropTransparentBorder } from './lib/image/crop'
 import { samplePixelGrid } from './lib/image/samplePixelGrid'
@@ -33,6 +33,7 @@ import { buildLabCache, matchColor } from './lib/image/paletteMatch'
 import { mergeLowUsageColors } from './lib/image/mergeColors'
 import { clusterColors, isKeyFacialColor } from './lib/image/clustering'
 import { applySampling, type SamplingMode } from './lib/image/sampling'
+import { generatePixelDesignGrid } from './lib/image/pixelDesign'
 import { computeColorStats } from './lib/utils/stats'
 import { getPalette } from './data/palettes'
 import { transformImage, type ImageTransformOp } from './lib/image/transform'
@@ -71,6 +72,8 @@ function App() {
   const [portraitEnhance, setPortraitEnhance] = useState(false)
   const [maxColors, setMaxColors] = useState(20)
   const [mergeThreshold, setMergeThreshold] = useState(5)
+  const [highFidelityPixelMode, setHighFidelityPixelMode] = useState(false)
+  const [pixelDesignGrid, setPixelDesignGrid] = useState<PixelDesignGrid | null>(null)
   const [rawPixels, setRawPixels] = useState<PixelCell[] | null>(null)
   const [patternData, setPatternData] = useState<PatternData | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -260,7 +263,56 @@ function App() {
 
   async function generatePattern() {
     if (!imageUrl) { setErrorMsg('请先上传图片'); return }
-    await generatePatternFromUrl(imageUrl)
+    if (highFidelityPixelMode) {
+      await generateHighFidelityPattern(imageUrl)
+    } else {
+      await generatePatternFromUrl(imageUrl)
+    }
+  }
+
+  async function generateHighFidelityPattern(url: string) {
+    if (!url || width < 1 || height < 1 || width > 500 || height > 500) return
+    setErrorMsg(null)
+    setIsGenerating(true)
+    setPatternData(null)
+    setEditMode(false)
+    setCellHistory(null)
+    try {
+      // Step 1: Generate pixel design grid
+      const grid = await generatePixelDesignGrid(url, width, height, maxColors, portraitEnhance)
+      setPixelDesignGrid(grid)
+      setRawPixels(grid.pixels)
+
+      // Step 2: Map to pattern data (1:1 mapping from grid)
+      const palette = getPalette(brand)
+      const labCache = buildLabCache(palette)
+
+      // Create pattern cells from grid pixels with 1:1 mapping
+      const cells: PatternCell[] = grid.pixels.map((px) => {
+        if (px.isTransparent) return { row: px.y, col: px.x, isTransparent: true, color: TRANSPARENT_COLOR }
+        const color = matchColor(px.r, px.g, px.b, palette, labCache)
+        return { row: px.y, col: px.x, isTransparent: false, color }
+      })
+
+      // Verify 1:1 mapping: pattern cells must match grid dimensions
+      if (cells.length !== grid.width * grid.height) {
+        throw new Error('Pattern cell count does not match pixel design grid')
+      }
+
+      const colorStats = computeColorStats(cells)
+      const beadCount = cells.filter(c => !c.isTransparent).length
+      const transparentCount = grid.pixels.filter(px => px.isTransparent).length
+
+      setPatternData({ size: { width, height }, cells, rawPixels: grid.pixels, colorStats, beadCount, transparentCount })
+      setCellHistory(historyCreate(cells))
+      setAutoSelectPixelTab(true)
+    } catch (err) {
+      setErrorMsg('高还原像素画生成失败，请重试')
+      console.error(err)
+      setAutoSelectPixelTab(false)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   // ── Pixel grid recognition ──────────────────────────────────────────────────
@@ -1030,18 +1082,25 @@ function App() {
                   </button>
                 </>
               ) : (
-                <PreviewCanvas
-                  imageUrl={imageUrl}
-                  patternData={patternData}
-                  width={width}
-                  height={height}
-                  mirror={mirror}
-                  onEditClick={toggleEditMode}
-                  autoSelectPixelTab={autoSelectPixelTab}
-                  onGenerate={generatePattern}
-                  isGenerating={isGenerating}
-                  canGenerate={!!imageUrl}
-                />
+                <>
+                  {highFidelityPixelMode && pixelDesignGrid && (
+                    <div className="absolute top-2 left-2 bg-indigo-100 border border-indigo-300 rounded px-2 py-1 text-xs text-indigo-700 z-10">
+                      像素设计稿: {pixelDesignGrid.width}×{pixelDesignGrid.height}
+                    </div>
+                  )}
+                  <PreviewCanvas
+                    imageUrl={imageUrl}
+                    patternData={patternData}
+                    width={width}
+                    height={height}
+                    mirror={mirror}
+                    onEditClick={toggleEditMode}
+                    autoSelectPixelTab={autoSelectPixelTab}
+                    onGenerate={generatePattern}
+                    isGenerating={isGenerating}
+                    canGenerate={!!imageUrl}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -1073,6 +1132,30 @@ function App() {
             <p className="text-xs text-gray-600 mt-2 leading-relaxed">
               {samplingMode === 'average' ? '适合普通照片' : '适合像素图/拼豆实物图'}
             </p>
+          </div>
+
+          {/* Workflow mode selection */}
+          <div className="mt-6 mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">工作流模式</p>
+            <div className="flex gap-2">
+              {[
+                { key: false, label: '基础图纸模式', desc: '快速转图' },
+                { key: true, label: '高还原像素画', desc: '像素化高还原' }
+              ].map((mode) => (
+                <button
+                  key={String(mode.key)}
+                  onClick={() => setHighFidelityPixelMode(mode.key)}
+                  className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+                    highFidelityPixelMode === mode.key
+                      ? 'bg-indigo-500 text-white border-indigo-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400'
+                  }`}
+                >
+                  <div className="font-semibold">{mode.label}</div>
+                  <div className="text-xs opacity-75">{mode.desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Portrait detail enhancement */}

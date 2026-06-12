@@ -30,6 +30,17 @@ export interface ColorStat {
   grams: number
 }
 
+export interface PixelDesignGrid {
+  width: number
+  height: number
+  pixels: PixelCell[]
+  metadata?: {
+    sourceImageSize?: { w: number; h: number }
+    downscaleFactor?: number
+    timestamp?: number
+  }
+}
+
 export interface PatternData {
   size: PatternSize
   cells: PatternCell[]
