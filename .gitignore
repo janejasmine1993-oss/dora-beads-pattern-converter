@@ -25,3 +25,12 @@ dist-ssr
 verify_*.mjs
 playwright
 .env.local
+
+# Database backups (local only, never commit to Git)
+backups/postgresql/
+*.dump
+*.sql
+*.backup
+*.tar
+*.gz
+server/.env.local
