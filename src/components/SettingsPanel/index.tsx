@@ -12,7 +12,9 @@ interface SettingsPanelProps {
   onSizeModeChange?: (mode: 'preset' | 'custom' | 'originalRatio') => void
   ratioLongSide?: number
   onRatioLongSideChange?: (value: number) => void
-  calcSizeByRatio?: (longSide: number) => { width: number; height: number }
+  maxRatioLongSide?: number
+  onRefreshSize?: () => void
+  highFidelityMode?: boolean
 }
 
 export function SettingsPanel({
@@ -25,7 +27,9 @@ export function SettingsPanel({
   onSizeModeChange,
   ratioLongSide = 104,
   onRatioLongSideChange,
-  calcSizeByRatio,
+  maxRatioLongSide = 500,
+  onRefreshSize,
+  highFidelityMode = false,
 }: SettingsPanelProps) {
   const [customW, setCustomW] = useState(String(width))
   const [customH, setCustomH] = useState(String(height))
@@ -144,24 +148,41 @@ export function SettingsPanel({
           <input
             type="number"
             min={1}
-            max={500}
+            max={maxRatioLongSide}
             value={ratioLongSide}
             onChange={(e) => {
-              const val = Math.max(1, Math.min(500, parseInt(e.target.value) || 104))
+              const val = Math.max(1, Math.min(maxRatioLongSide, parseInt(e.target.value) || 104))
               onRatioLongSideChange?.(val)
-              const dims = calcSizeByRatio?.(val)
-              if (dims) onSizeChange(dims.width, dims.height)
             }}
             className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
           />
         </div>
+        <button
+          onClick={onRefreshSize}
+          className="px-2 py-1 text-xs bg-blue-500 text-white rounded border border-blue-500 hover:bg-blue-600 transition-colors"
+        >
+          更新尺寸
+        </button>
+      </div>
+      <div className="flex gap-2 mb-2">
         <div className="flex-1">
           <label className="text-xs text-gray-500 mb-1 block">计算结果</label>
-          <div className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 text-gray-700 flex items-center">
+          <div className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 text-gray-700">
             {width} × {height}
           </div>
         </div>
       </div>
+      {highFidelityMode && (
+        <div className="bg-blue-50 rounded p-2 text-xs text-blue-700 mb-2 border border-blue-200">
+          <p className="font-medium mb-1">高还原像素画模式</p>
+          <p>总格数：{width * height} 格</p>
+          {(width * height > 500000) && (
+            <p className="mt-1 text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-1">
+              ⚠️ 大图会增加计算和导出压力，生成可能需要数秒
+            </p>
+          )}
+        </div>
+      )}
       </>
       )}
 

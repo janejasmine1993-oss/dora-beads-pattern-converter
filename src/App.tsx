@@ -24,6 +24,10 @@ import type { PatternCell, PatternData, PixelCell } from './types/pattern'
 
 type ImportMode = 'photo-direct' | 'ai-enhanced' | 'pixel-grid' | 'existing-pattern'
 type AppPage = 'home' | 'workspace' | 'ai-optimize'
+// Size limits for different modes
+const MAX_PATTERN_SIDE_BASE = 500
+const MAX_PATTERN_SIDE_HIGH_FIDELITY = 1000
+
 type ComingSoonFeature = 'works' | 'membership' | 'redeem' | 'help' | 'login' | null
 import { TRANSPARENT_COLOR, type PixelDesignGrid } from './types/pattern'
 import { loadImage, resizeWithContain } from './lib/image/resize'
@@ -185,7 +189,7 @@ function App() {
 
   // ── Core generate function (accepts URL to avoid stale-state issue) ─────────
   async function generatePatternFromUrl(url: string) {
-    if (!url || width < 1 || height < 1 || width > 500 || height > 500) return
+    if (!url || width < 1 || height < 1 || width > MAX_PATTERN_SIDE_BASE || height > MAX_PATTERN_SIDE_BASE) return
     setErrorMsg(null)
     setIsGenerating(true)
     setPatternData(null)
@@ -271,7 +275,7 @@ function App() {
   }
 
   async function generateHighFidelityPattern(url: string) {
-    if (!url || width < 1 || height < 1 || width > 500 || height > 500) return
+    if (!url || width < 1 || height < 1 || width > MAX_PATTERN_SIDE_HIGH_FIDELITY || height > MAX_PATTERN_SIDE_HIGH_FIDELITY) return
     setErrorMsg(null)
     setIsGenerating(true)
     setPatternData(null)
@@ -568,6 +572,15 @@ function App() {
         height: longSide
       }
     }
+  }
+
+  function refreshSizeByRatio() {
+    if (sizeMode !== 'originalRatio' || !imageDimensions) return
+    const newSize = calcSizeByRatio(ratioLongSide)
+    setWidth(newSize.width)
+    setHeight(newSize.height)
+    setPatternData(null)
+    setPixelDesignGrid(null)
   }
 
   function handleSizeModeChange(mode: 'preset' | 'custom' | 'originalRatio') {
@@ -1019,7 +1032,9 @@ function App() {
                 onSizeModeChange={handleSizeModeChange}
                 ratioLongSide={ratioLongSide}
                 onRatioLongSideChange={setRatioLongSide}
-                calcSizeByRatio={calcSizeByRatio}
+                maxRatioLongSide={highFidelityPixelMode ? MAX_PATTERN_SIDE_HIGH_FIDELITY : MAX_PATTERN_SIDE_BASE}
+                onRefreshSize={refreshSizeByRatio}
+                highFidelityMode={highFidelityPixelMode}
               />
               <ColorControlPanel
                 maxColors={maxColors} mergeThreshold={mergeThreshold}
