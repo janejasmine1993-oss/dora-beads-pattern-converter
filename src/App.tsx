@@ -97,7 +97,9 @@ function App() {
   const [selection, setSelection] = useState<SelectionRect | null>(null)
   const [fillThreshold, setFillThreshold] = useState(0)
   const [zoom, setZoom] = useState(1)
+  const [fitZoom, setFitZoom] = useState(false)
   const [mirror, setMirror] = useState(false)
+  const [cropRect, setCropRect] = useState<{ left: number; top: number; right: number; bottom: number } | null>(null)
   const [cellHistory, setCellHistory] = useState<CellHistory | null>(null)
   const [showCellCodes, setShowCellCodes] = useState(false)
   const [spacePanning, setSpacePanning] = useState(false)
@@ -754,12 +756,25 @@ function App() {
       if (!v) {
         // Entering edit mode: set default zoom based on pattern size
         const maxDim = Math.max(patternData?.size.width || 0, patternData?.size.height || 0)
-        let defaultZoom = 1
-        if (maxDim > 200) defaultZoom = 0.25
-        else if (maxDim > 150) defaultZoom = 0.5
-        else if (maxDim > 104) defaultZoom = 1
-        else defaultZoom = 1.5
-        setZoom(defaultZoom)
+        if (maxDim > 500) {
+          setFitZoom(true)
+          setZoom(1)
+        } else {
+          setFitZoom(false)
+          let defaultZoom = 1
+          if (maxDim > 200) defaultZoom = 0.5
+          else if (maxDim > 104) defaultZoom = 1
+          else defaultZoom = 1.5
+          setZoom(defaultZoom)
+        }
+
+        // Initialize crop rect to full pattern
+        setCropRect({
+          left: 0,
+          top: 0,
+          right: patternData.size.width,
+          bottom: patternData.size.height
+        })
       }
       return !v
     })
@@ -969,19 +984,110 @@ function App() {
           {editMode && patternData && (
             <div className="mb-4 pb-4 border-b border-gray-200">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">缩放倍率</p>
+              <div className="flex flex-wrap gap-1 mb-2">
+                <button
+                  onClick={() => { setFitZoom(true); setZoom(1); }}
+                  className={`flex-1 min-w-12 py-1.5 text-xs rounded border transition-colors ${
+                    fitZoom
+                      ? 'bg-green-500 text-white border-green-500 font-medium'
+                      : 'border-gray-300 text-gray-600 hover:border-green-400'
+                  }`}
+                  title="适应屏幕"
+                >
+                  适应屏幕
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1">
-                {[0.25, 0.5, 1, 1.5, 2].map(z => (
-                  <button key={z} onClick={() => setZoom(z)}
+                {[0.25, 0.5, 1, 2].map(z => (
+                  <button key={z} onClick={() => { setFitZoom(false); setZoom(z); }}
                     className={`flex-1 min-w-12 py-1.5 text-xs rounded border transition-colors ${
-                      zoom === z
+                      !fitZoom && zoom === z
                         ? 'bg-blue-500 text-white border-blue-500 font-medium'
                         : 'border-gray-300 text-gray-600 hover:border-blue-400'
                     }`}
                     title={`${Math.round(z * 100)}% zoom · 使用 +/− 键快速调整`}
                   >
-                    {z === 1 ? '1×' : z < 1 ? `${Math.round(z * 100)}%` : `${z}×`}
+                    {z === 1 ? '100%' : z < 1 ? `${Math.round(z * 100)}%` : `${Math.round(z * 100)}%`}
                   </button>
                 ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">当前: {fitZoom ? '适应屏幕' : `${Math.round(zoom * 100)}%`}</p>
+            </div>
+          )}
+
+          {/* Crop tools (edit mode only) */}
+          {editMode && patternData && cropRect && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">图纸裁切</p>
+              <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
+                <div>
+                  <label className="text-gray-600 block mb-1">左边界</label>
+                  <input type="number" min={0} max={patternData.size.width - 1} value={cropRect.left}
+                    onChange={(e) => setCropRect({...cropRect, left: Math.max(0, Math.min(cropRect.right - 1, parseInt(e.target.value) || 0))})}
+                    className="w-full border border-gray-300 rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-600 block mb-1">右边界</label>
+                  <input type="number" min={1} max={patternData.size.width} value={cropRect.right}
+                    onChange={(e) => setCropRect({...cropRect, right: Math.max(cropRect.left + 1, Math.min(patternData.size.width, parseInt(e.target.value) || patternData.size.width))})}
+                    className="w-full border border-gray-300 rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-600 block mb-1">上边界</label>
+                  <input type="number" min={0} max={patternData.size.height - 1} value={cropRect.top}
+                    onChange={(e) => setCropRect({...cropRect, top: Math.max(0, Math.min(cropRect.bottom - 1, parseInt(e.target.value) || 0))})}
+                    className="w-full border border-gray-300 rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-600 block mb-1">下边界</label>
+                  <input type="number" min={1} max={patternData.size.height} value={cropRect.bottom}
+                    onChange={(e) => setCropRect({...cropRect, bottom: Math.max(cropRect.top + 1, Math.min(patternData.size.height, parseInt(e.target.value) || patternData.size.height))})}
+                    className="w-full border border-gray-300 rounded px-2 py-1"
+                  />
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded p-2 mb-2 text-xs text-gray-600">
+                <p>裁切尺寸: {cropRect.right - cropRect.left} × {cropRect.bottom - cropRect.top} 格</p>
+                <p>总格数: {(cropRect.right - cropRect.left) * (cropRect.bottom - cropRect.top)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCropRect({left: 0, top: 0, right: patternData.size.width, bottom: patternData.size.height})}
+                  className="flex-1 px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                >
+                  重置裁切
+                </button>
+                <button
+                  onClick={() => {
+                    const croppedCells = patternData.cells.filter(c =>
+                      c.col >= cropRect.left && c.col < cropRect.right &&
+                      c.row >= cropRect.top && c.row < cropRect.bottom
+                    ).map(c => ({
+                      ...c,
+                      col: c.col - cropRect.left,
+                      row: c.row - cropRect.top
+                    }));
+                    const newWidth = cropRect.right - cropRect.left;
+                    const newHeight = cropRect.bottom - cropRect.top;
+                    const colorStats = computeColorStats(croppedCells);
+                    const beadCount = croppedCells.filter(c => !c.isTransparent).length;
+                    setPatternData({
+                      size: { width: newWidth, height: newHeight },
+                      cells: croppedCells,
+                      rawPixels: patternData.rawPixels,
+                      colorStats,
+                      beadCount,
+                      transparentCount: croppedCells.filter(c => c.isTransparent).length
+                    });
+                    setCropRect(null);
+                  }}
+                  className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  应用裁切
+                </button>
               </div>
             </div>
           )}
