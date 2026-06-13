@@ -49,7 +49,7 @@ export function FeedbackPanel({
     if (FEEDBACK_FORM_URL) {
       window.open(FEEDBACK_FORM_URL, '_blank')
     } else {
-      alert('反馈表单链接暂未配置，请稍后再试。\n\n你可以先点击"复制反馈"按钮，然后将内容发送给开发者。')
+      alert('反馈表单暂未配置，请先复制反馈内容发送给我。')
     }
   }
 
