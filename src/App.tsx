@@ -12,6 +12,8 @@ import { StatsPanel } from './components/StatsPanel'
 import { ExportPanel } from './components/ExportPanel'
 import { CropModal } from './components/CropModal'
 import { BackgroundRemovalPanel } from './components/BackgroundRemovalPanel'
+import { FeedbackPanel } from './components/FeedbackPanel'
+import { FeedbackButton } from './components/FeedbackButton'
 import { PixelGridImportPanel } from './components/PixelGridImportPanel'
 import { ExistingPatternImportPanel } from './components/ExistingPatternImportPanel'
 import { AppHeader } from './components/AppHeader'
@@ -55,6 +57,7 @@ function App() {
   const [comingSoonFeature, setComingSoonFeature] = useState<ComingSoonFeature>(null)
   const [isUserCenterOpen, setIsUserCenterOpen] = useState(false)
   const [authReturnPage, setAuthReturnPage] = useState<AppPage | null>(null)
+  const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(false)
 
   // ── Import mode ──────────────────────────────────────────────────────────────
   const [importMode, setImportMode] = useState<ImportMode>('photo-direct')
@@ -1476,11 +1479,28 @@ function App() {
         currentWorkspaceImage={imageUrl ? { url: imageUrl, name: workTitle || '当前工作台图片' } : undefined}
       />
 
+      {/* Feedback Button (Floating) */}
+      {currentPage === 'workspace' && (
+        <FeedbackButton onClick={() => setIsFeedbackPanelOpen(true)} />
+      )}
+
+      {/* Feedback Panel */}
+      <FeedbackPanel
+        isOpen={isFeedbackPanelOpen}
+        onClose={() => setIsFeedbackPanelOpen(false)}
+        currentSize={patternData?.size}
+        currentBrand={brand}
+        currentColorCount={patternData?.colorStats.length ?? 0}
+        samplingMode={samplingMode}
+        portraitEnhance={portraitEnhance}
+        highFidelityMode={highFidelityPixelMode}
+      />
+
       {/* User Center Button (Floating) */}
       {currentPage === 'workspace' && (
         <button
           onClick={() => setIsUserCenterOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition flex items-center justify-center z-40 hover:scale-110"
+          className="fixed bottom-6 left-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition flex items-center justify-center z-40 hover:scale-110"
           title="打开用户中心"
         >
           <span className="text-2xl">👤</span>
