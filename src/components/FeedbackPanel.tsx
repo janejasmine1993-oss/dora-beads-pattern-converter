@@ -11,7 +11,7 @@ interface FeedbackPanelProps {
   highFidelityMode?: boolean
 }
 
-const FEEDBACK_FORM_URL = '' // 预留外部表单链接
+const FEEDBACK_FORM_URL = 'https://wcnqbrkrauvd.feishu.cn/share/base/form/shrcneOqnTiFylhYWImvrOfe5Lf' // 飞书表单链接
 
 export function FeedbackPanel({
   isOpen,
