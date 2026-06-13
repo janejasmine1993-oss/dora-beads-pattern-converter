@@ -5,7 +5,6 @@ import type { EditorTool, SelectionRect } from '../../lib/editor/types'
 import { TOOL_CURSORS } from '../../lib/editor/types'
 import { paintCell, eraseCell } from '../../lib/editor/operations'
 import { floodFill } from '../../lib/editor/floodFill'
-import { CropFrameOverlay } from './CropFrameOverlay'
 
 const FF_MONO = 'Consolas, Menlo, Monaco, "Courier New", monospace'
 
@@ -19,8 +18,6 @@ interface EditableCanvasProps {
   zoom: number
   showCellCodes?: boolean
   spacePanning?: boolean    // space key held — temporary grab/pan mode
-  cropRect?: { left: number; top: number; right: number; bottom: number } | null
-  onCropRectChange?: (rect: { left: number; top: number; right: number; bottom: number }) => void
   onCellsChange: (cells: PatternCell[]) => void
   onColorPick: (color: PaletteColor) => void
   onSelectionChange: (sel: SelectionRect | null) => void
@@ -33,7 +30,6 @@ function calcBaseCS(w: number, h: number) {
 export function EditableCanvas({
   patternData, activeTool, activeColor, highlightColorCode,
   selection, mirror, zoom, showCellCodes = true, spacePanning = false,
-  cropRect = null, onCropRectChange = undefined,
   onCellsChange, onColorPick, onSelectionChange,
 }: EditableCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -286,16 +282,6 @@ export function EditableCanvas({
             isSelecting.current = false
           }}
         />
-        {cropRect && onCropRectChange && (
-          <CropFrameOverlay
-            cropRect={cropRect}
-            onCropRectChange={onCropRectChange}
-            cellSize={CS}
-            patternWidth={width}
-            patternHeight={height}
-            canvasElement={canvasRef.current}
-          />
-        )}
       </div>
     </div>
   )
