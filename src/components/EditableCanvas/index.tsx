@@ -268,8 +268,8 @@ export function EditableCanvas({
     : TOOL_CURSORS[activeTool]
 
   return (
-    <div ref={containerRef} className="overflow-auto flex-1 bg-gray-100 p-2 rounded-lg relative" style={{ minHeight: 0 }}>
-      <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={containerRef} className="overflow-auto flex-1 bg-gray-100 rounded-lg relative" style={{ minHeight: 0, padding: '8px' }}>
+      <div style={{ position: 'relative', width: 'fit-content' }}>
         <canvas
           ref={canvasRef}
           style={{
@@ -296,6 +296,7 @@ export function EditableCanvas({
             containerElement={containerRef.current}
             patternWidth={width}
             patternHeight={height}
+            canvasElement={canvasRef.current}
           />
         )}
       </div>

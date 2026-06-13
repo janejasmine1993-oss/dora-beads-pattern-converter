@@ -9,13 +9,14 @@ interface CropFrameOverlayProps {
   containerElement: HTMLDivElement | null
   patternWidth: number
   patternHeight: number
+  canvasElement?: HTMLCanvasElement | null
 }
 
 type DragEdge = 'left' | 'right' | 'top' | 'bottom' | null
 
 export function CropFrameOverlay({
   cropRect, onCropRectChange, canvasWidth, canvasHeight,
-  cellSize, containerElement, patternWidth, patternHeight
+  cellSize, containerElement, patternWidth, patternHeight, canvasElement
 }: CropFrameOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [dragEdge, setDragEdge] = useState<DragEdge>(null)
@@ -37,9 +38,11 @@ export function CropFrameOverlay({
 
   function screenToGridCoords(clientX: number, clientY: number) {
     if (!containerElement) return { col: 0, row: 0 }
-    const canvasRect = containerElement.getBoundingClientRect()
-    const x = clientX - canvasRect.left + containerElement.scrollLeft
-    const y = clientY - canvasRect.top + containerElement.scrollTop
+
+    // Use canvas position if available for more accurate coordinates
+    const rect = canvasElement?.getBoundingClientRect() ?? containerElement.getBoundingClientRect()
+    const x = clientX - rect.left + containerElement.scrollLeft
+    const y = clientY - rect.top + containerElement.scrollTop
     const col = x / cellSize
     const row = y / cellSize
     return { col, row }
@@ -61,12 +64,10 @@ export function CropFrameOverlay({
     }
   }
 
-  // Global drag handlers
+  // Global drag handlers - only depend on functions, not state values
   useEffect(() => {
-    if (!dragStartRef.current) return
-
     function handleMouseMove(e: MouseEvent) {
-      if (!dragStartRef.current || !cropRect) return
+      if (!dragStartRef.current || !containerElement) return
 
       const { edge, startX, startY, rect } = dragStartRef.current
       const startCoords = screenToGridCoords(startX, startY)
@@ -96,14 +97,16 @@ export function CropFrameOverlay({
       setDragEdge(null)
     }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    if (dragStartRef.current) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
     }
-  }, [cropRect, patternWidth, patternHeight, cellSize, containerElement])
+  }, [cellSize, containerElement, patternWidth, patternHeight, onCropRectChange])
 
   const handleSize = 14
   const borderWidth = 3
