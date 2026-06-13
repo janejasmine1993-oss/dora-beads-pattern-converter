@@ -58,8 +58,6 @@ export function CropFrameOverlay({
 
   // Global pointer move handler
   useEffect(() => {
-    if (!dragStateRef.current) return
-
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragStateRef.current) return
 
