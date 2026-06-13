@@ -286,14 +286,11 @@ export function EditableCanvas({
             isSelecting.current = false
           }}
         />
-        {cropRect && onCropRectChange && containerRef.current && (
+        {cropRect && onCropRectChange && (
           <CropFrameOverlay
             cropRect={cropRect}
             onCropRectChange={onCropRectChange}
-            canvasWidth={width * CS}
-            canvasHeight={height * CS}
             cellSize={CS}
-            containerElement={containerRef.current}
             patternWidth={width}
             patternHeight={height}
             canvasElement={canvasRef.current}
