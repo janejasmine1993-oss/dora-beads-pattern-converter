@@ -14,94 +14,102 @@ type DragEdge = 'left' | 'right' | 'top' | 'bottom' | null
 export function CropFrameOverlay({
   cropRect, onCropRectChange, cellSize, patternWidth, patternHeight, canvasElement
 }: CropFrameOverlayProps) {
-  const [dragEdge, setDragEdge] = useState<DragEdge>(null)
-  const [hoveredEdge, setHoveredEdge] = useState<DragEdge>(null)
+  const [draggingEdge, setDraggingEdge] = useState<DragEdge>(null)
   const dragStateRef = useRef<{
     edge: DragEdge
-    startCol: number
-    startRow: number
+    startScreenX: number
+    startScreenY: number
     initialRect: { left: number; top: number; right: number; bottom: number }
   } | null>(null)
 
-  if (!cropRect) return null
+  if (!cropRect || !canvasElement) return null
 
-  // Canvas positioning
-  const canvasRect = canvasElement?.getBoundingClientRect() ?? { left: 0, top: 0, width: 0, height: 0 }
+  // Get canvas position in viewport
+  const getCanvasOffset = () => {
+    const rect = canvasElement.getBoundingClientRect()
+    return { x: rect.left, y: rect.top }
+  }
 
-  // Convert screen coordinates to grid coordinates (relative to canvas)
-  const screenToGrid = (clientX: number, clientY: number) => {
-    const relX = clientX - canvasRect.left
-    const relY = clientY - canvasRect.top
+  // Convert screen coords to grid coords
+  const screenToGridCoords = (screenX: number, screenY: number): { col: number; row: number } => {
+    const { x: canvasX, y: canvasY } = getCanvasOffset()
+    const relX = screenX - canvasX
+    const relY = screenY - canvasY
     const col = relX / cellSize
     const row = relY / cellSize
     return { col, row }
   }
 
-  const handleMouseDown = (edge: DragEdge) => (e: React.MouseEvent<HTMLDivElement>) => {
+  // Handle pointer down on drag handle
+  const handlePointerDown = (edge: DragEdge) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!cropRect || !edge) return
     e.preventDefault()
     e.stopPropagation()
-    if (!cropRect || !edge) return
 
-    const { col, row } = screenToGrid(e.clientX, e.clientY)
     dragStateRef.current = {
       edge,
-      startCol: col,
-      startRow: row,
+      startScreenX: e.clientX,
+      startScreenY: e.clientY,
       initialRect: { ...cropRect }
     }
-    setDragEdge(edge)
+    setDraggingEdge(edge)
+    console.log(`[CropDebug] Start dragging ${edge}`, { x: e.clientX, y: e.clientY })
   }
 
-  // Global mouse move and up handlers
+  // Global pointer move handler
   useEffect(() => {
     if (!dragStateRef.current) return
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!dragStateRef.current) return
 
-      const { edge, startCol, startRow, initialRect } = dragStateRef.current
-      const { col, row } = screenToGrid(e.clientX, e.clientY)
+      const { edge, startScreenX, startScreenY, initialRect } = dragStateRef.current
+      const startCoords = screenToGridCoords(startScreenX, startScreenY)
+      const currentCoords = screenToGridCoords(e.clientX, e.clientY)
 
-      const colDelta = col - startCol
-      const rowDelta = row - startRow
+      const colDelta = Math.round(currentCoords.col - startCoords.col)
+      const rowDelta = Math.round(currentCoords.row - startCoords.row)
 
       let newRect = { ...initialRect }
 
       if (edge === 'left') {
-        newRect.left = Math.max(0, Math.min(Math.round(initialRect.left + colDelta), initialRect.right - 1))
+        newRect.left = Math.max(0, Math.min(initialRect.left + colDelta, initialRect.right - 1))
       } else if (edge === 'right') {
-        newRect.right = Math.min(patternWidth, Math.max(Math.round(initialRect.right + colDelta), initialRect.left + 1))
+        newRect.right = Math.min(patternWidth, Math.max(initialRect.right + colDelta, initialRect.left + 1))
       } else if (edge === 'top') {
-        newRect.top = Math.max(0, Math.min(Math.round(initialRect.top + rowDelta), initialRect.bottom - 1))
+        newRect.top = Math.max(0, Math.min(initialRect.top + rowDelta, initialRect.bottom - 1))
       } else if (edge === 'bottom') {
-        newRect.bottom = Math.min(patternHeight, Math.max(Math.round(initialRect.bottom + rowDelta), initialRect.top + 1))
+        newRect.bottom = Math.min(patternHeight, Math.max(initialRect.bottom + rowDelta, initialRect.top + 1))
       }
 
+      console.log(`[CropDebug] Moving ${edge}: delta=${colDelta}/${rowDelta}, newRect=`, newRect)
       onCropRectChange(newRect)
     }
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
+      if (dragStateRef.current) {
+        console.log(`[CropDebug] Stop dragging ${dragStateRef.current.edge}`)
+      }
       dragStateRef.current = null
-      setDragEdge(null)
+      setDraggingEdge(null)
     }
 
-    document.addEventListener('mousemove', handleMouseMove, false)
-    document.addEventListener('mouseup', handleMouseUp, false)
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove, false)
-      document.removeEventListener('mouseup', handleMouseUp, false)
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
     }
   }, [cellSize, patternWidth, patternHeight, onCropRectChange])
 
-  // Calculate overlay dimensions and position
+  // Calculate overlay position
   const overlayLeft = cropRect.left * cellSize
   const overlayTop = cropRect.top * cellSize
   const overlayWidth = (cropRect.right - cropRect.left) * cellSize
   const overlayHeight = (cropRect.bottom - cropRect.top) * cellSize
 
-  const handleSize = 12
-  const borderWidth = 2
+  const handleSize = 20 // 增大到 20px 便于点击
 
   return (
     <div
@@ -112,41 +120,38 @@ export function CropFrameOverlay({
         width: overlayWidth,
         height: overlayHeight,
         pointerEvents: 'none',
-        zIndex: 100
+        zIndex: 200
       }}
     >
-      {/* Background overlay (darkening outside area) */}
+      {/* 暗化外部区域 */}
       <div
         style={{
-          position: 'absolute',
-          left: -10000,
-          top: -10000,
-          width: 20000,
-          height: 20000,
+          position: 'fixed',
+          inset: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.25)',
-          zIndex: -1,
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          zIndex: -1
         }}
       />
 
-      {/* Crop border */}
+      {/* 裁切框边框 */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          border: `${borderWidth}px solid #22d3ee`,
+          border: '2px solid #06b6d4',
           boxSizing: 'border-box',
           pointerEvents: 'none',
-          zIndex: 1
+          zIndex: 201
         }}
       />
 
-      {/* Dimension indicator during drag */}
-      {dragEdge && (
+      {/* 拖动尺寸显示 */}
+      {draggingEdge && (
         <div
           style={{
             position: 'absolute',
-            left: overlayWidth / 2 - 40,
+            left: overlayWidth / 2 - 50,
             top: overlayHeight / 2 - 12,
             backgroundColor: '#0ea5e9',
             color: 'white',
@@ -156,89 +161,85 @@ export function CropFrameOverlay({
             fontWeight: 'bold',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
-            zIndex: 50
+            zIndex: 300
           }}
         >
           {cropRect.right - cropRect.left} × {cropRect.bottom - cropRect.top}
         </div>
       )}
 
-      {/* Left edge handle */}
+      {/* 左边调节杆 - 20px 宽 */}
       <div
-        onMouseDown={handleMouseDown('left')}
-        onMouseEnter={() => setHoveredEdge('left')}
-        onMouseLeave={() => hoveredEdge === 'left' && setHoveredEdge(null)}
+        onPointerDown={handlePointerDown('left')}
         style={{
           position: 'absolute',
           left: -handleSize / 2,
-          top: Math.max(0, (overlayHeight - handleSize) / 2),
+          top: 0,
           width: handleSize,
-          height: Math.min(handleSize, overlayHeight),
+          height: overlayHeight || handleSize,
           cursor: 'ew-resize',
-          backgroundColor: hoveredEdge === 'left' ? '#06b6d4' : '#22d3ee',
-          borderRadius: '2px',
+          backgroundColor: draggingEdge === 'left' ? '#0891b2' : '#06b6d4',
+          opacity: 0.9,
           pointerEvents: 'auto',
-          zIndex: 50,
+          zIndex: 250,
+          touchAction: 'none',
           transition: 'background-color 0.15s'
         }}
       />
 
-      {/* Right edge handle */}
+      {/* 右边调节杆 - 20px 宽 */}
       <div
-        onMouseDown={handleMouseDown('right')}
-        onMouseEnter={() => setHoveredEdge('right')}
-        onMouseLeave={() => hoveredEdge === 'right' && setHoveredEdge(null)}
+        onPointerDown={handlePointerDown('right')}
         style={{
           position: 'absolute',
           right: -handleSize / 2,
-          top: Math.max(0, (overlayHeight - handleSize) / 2),
+          top: 0,
           width: handleSize,
-          height: Math.min(handleSize, overlayHeight),
+          height: overlayHeight || handleSize,
           cursor: 'ew-resize',
-          backgroundColor: hoveredEdge === 'right' ? '#06b6d4' : '#22d3ee',
-          borderRadius: '2px',
+          backgroundColor: draggingEdge === 'right' ? '#0891b2' : '#06b6d4',
+          opacity: 0.9,
           pointerEvents: 'auto',
-          zIndex: 50,
+          zIndex: 250,
+          touchAction: 'none',
           transition: 'background-color 0.15s'
         }}
       />
 
-      {/* Top edge handle */}
+      {/* 上边调节杆 - 20px 高 */}
       <div
-        onMouseDown={handleMouseDown('top')}
-        onMouseEnter={() => setHoveredEdge('top')}
-        onMouseLeave={() => hoveredEdge === 'top' && setHoveredEdge(null)}
+        onPointerDown={handlePointerDown('top')}
         style={{
           position: 'absolute',
-          left: Math.max(0, (overlayWidth - handleSize) / 2),
+          left: 0,
           top: -handleSize / 2,
-          width: Math.min(handleSize, overlayWidth),
+          width: overlayWidth || handleSize,
           height: handleSize,
           cursor: 'ns-resize',
-          backgroundColor: hoveredEdge === 'top' ? '#06b6d4' : '#22d3ee',
-          borderRadius: '2px',
+          backgroundColor: draggingEdge === 'top' ? '#0891b2' : '#06b6d4',
+          opacity: 0.9,
           pointerEvents: 'auto',
-          zIndex: 50,
+          zIndex: 250,
+          touchAction: 'none',
           transition: 'background-color 0.15s'
         }}
       />
 
-      {/* Bottom edge handle */}
+      {/* 下边调节杆 - 20px 高 */}
       <div
-        onMouseDown={handleMouseDown('bottom')}
-        onMouseEnter={() => setHoveredEdge('bottom')}
-        onMouseLeave={() => hoveredEdge === 'bottom' && setHoveredEdge(null)}
+        onPointerDown={handlePointerDown('bottom')}
         style={{
           position: 'absolute',
-          left: Math.max(0, (overlayWidth - handleSize) / 2),
+          left: 0,
           bottom: -handleSize / 2,
-          width: Math.min(handleSize, overlayWidth),
+          width: overlayWidth || handleSize,
           height: handleSize,
           cursor: 'ns-resize',
-          backgroundColor: hoveredEdge === 'bottom' ? '#06b6d4' : '#22d3ee',
-          borderRadius: '2px',
+          backgroundColor: draggingEdge === 'bottom' ? '#0891b2' : '#06b6d4',
+          opacity: 0.9,
           pointerEvents: 'auto',
-          zIndex: 50,
+          zIndex: 250,
+          touchAction: 'none',
           transition: 'background-color 0.15s'
         }}
       />
