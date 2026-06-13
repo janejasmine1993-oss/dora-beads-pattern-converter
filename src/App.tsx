@@ -1072,16 +1072,46 @@ function App() {
                     }));
                     const newWidth = cropRect.right - cropRect.left;
                     const newHeight = cropRect.bottom - cropRect.top;
+
+                    // Crop rawPixels as well
+                    const croppedRawPixels = patternData.rawPixels.filter(px =>
+                      px.x >= cropRect.left && px.x < cropRect.right &&
+                      px.y >= cropRect.top && px.y < cropRect.bottom
+                    ).map(px => ({
+                      ...px,
+                      x: px.x - cropRect.left,
+                      y: px.y - cropRect.top
+                    }));
+
                     const colorStats = computeColorStats(croppedCells);
                     const beadCount = croppedCells.filter(c => !c.isTransparent).length;
                     setPatternData({
                       size: { width: newWidth, height: newHeight },
                       cells: croppedCells,
-                      rawPixels: patternData.rawPixels,
+                      rawPixels: croppedRawPixels,
                       colorStats,
                       beadCount,
                       transparentCount: croppedCells.filter(c => c.isTransparent).length
                     });
+
+                    // Crop pixelDesignGrid if it exists
+                    if (pixelDesignGrid) {
+                      const croppedGridPixels = pixelDesignGrid.pixels.filter(px =>
+                        px.x >= cropRect.left && px.x < cropRect.right &&
+                        px.y >= cropRect.top && px.y < cropRect.bottom
+                      ).map(px => ({
+                        ...px,
+                        x: px.x - cropRect.left,
+                        y: px.y - cropRect.top
+                      }));
+                      setPixelDesignGrid({
+                        width: newWidth,
+                        height: newHeight,
+                        pixels: croppedGridPixels,
+                        metadata: pixelDesignGrid.metadata
+                      });
+                    }
+
                     setCropRect(null);
                   }}
                   className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
