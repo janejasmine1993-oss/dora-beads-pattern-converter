@@ -1188,6 +1188,8 @@ function App() {
                     selection={selection}
                     mirror={mirror}
                     zoom={zoom}
+                    cropRect={cropRect}
+                    onCropRectChange={setCropRect}
                     onCellsChange={applyEdit}
                     onColorPick={handleColorPick}
                     onSelectionChange={setSelection}
