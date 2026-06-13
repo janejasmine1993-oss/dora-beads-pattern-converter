@@ -278,8 +278,8 @@ function App() {
     setEditMode(false)
     setCellHistory(null)
     try {
-      // Step 1: Generate pixel design grid
-      const grid = await generatePixelDesignGrid(url, width, height, maxColors, portraitEnhance)
+      // Step 1: Generate pixel design grid (high-fidelity: skip color quantization)
+      const grid = await generatePixelDesignGrid(url, width, height, 0, portraitEnhance, true)
       setPixelDesignGrid(grid)
       setRawPixels(grid.pixels)
 
@@ -1091,6 +1091,7 @@ function App() {
                   <PreviewCanvas
                     imageUrl={imageUrl}
                     patternData={patternData}
+                    pixelDesignGrid={pixelDesignGrid}
                     width={width}
                     height={height}
                     mirror={mirror}

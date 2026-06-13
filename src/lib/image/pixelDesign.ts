@@ -8,13 +8,15 @@ import { TRANSPARENT_ALPHA_THRESHOLD } from './resize'
 /**
  * Generate a pixel design grid from an image.
  * This is the intermediate "pixel art design draft" before brand color mapping.
+ * For high-fidelity mode: preserves color depth, minimal quantization.
  */
 export async function generatePixelDesignGrid(
   imageUrl: string,
   targetWidth: number,
   targetHeight: number,
-  maxColors: number,
-  portraitEnhance: boolean = false
+  maxColors: number = 0,
+  portraitEnhance: boolean = false,
+  skipColorQuantization: boolean = false
 ): Promise<PixelDesignGrid> {
   const img = await loadImage(imageUrl)
   const cropped = cropTransparentBorder(img)
@@ -56,37 +58,39 @@ export async function generatePixelDesignGrid(
     }
   })
 
-  // Color quantization using clustering
-  const nonTransparent = pixelCells.filter(px => !px.isTransparent)
-  if (nonTransparent.length > 0) {
-    const uniqueRgbs = Array.from(new Set(
-      nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
-    )).map(key => {
-      const [r, g, b] = key.split(',').map(Number) as [number, number, number]
-      return [r, g, b] as [number, number, number]
-    })
+  // Color quantization using clustering (optional, skipped for high-fidelity mode)
+  if (!skipColorQuantization && maxColors > 0) {
+    const nonTransparent = pixelCells.filter(px => !px.isTransparent)
+    if (nonTransparent.length > 0) {
+      const uniqueRgbs = Array.from(new Set(
+        nonTransparent.map(px => `${px.r},${px.g},${px.b}`)
+      )).map(key => {
+        const [r, g, b] = key.split(',').map(Number) as [number, number, number]
+        return [r, g, b] as [number, number, number]
+      })
 
-    // Cluster colors
-    const clusterK = Math.min(maxColors, Math.max(2, uniqueRgbs.length))
-    const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
+      // Cluster colors
+      const clusterK = Math.min(maxColors, Math.max(2, uniqueRgbs.length))
+      const { centers, assignments } = clusterColors(uniqueRgbs, clusterK)
 
-    // Map each pixel to its cluster center
-    const rgbToClusterIdx = new Map<string, number>()
-    for (let i = 0; i < uniqueRgbs.length; i++) {
-      const [r, g, b] = uniqueRgbs[i]
-      rgbToClusterIdx.set(`${r},${g},${b}`, assignments[i])
-    }
+      // Map each pixel to its cluster center
+      const rgbToClusterIdx = new Map<string, number>()
+      for (let i = 0; i < uniqueRgbs.length; i++) {
+        const [r, g, b] = uniqueRgbs[i]
+        rgbToClusterIdx.set(`${r},${g},${b}`, assignments[i])
+      }
 
-    // Replace pixels with cluster center colors
-    for (const cell of pixelCells) {
-      if (!cell.isTransparent) {
-        const key = `${cell.r},${cell.g},${cell.b}`
-        const clusterIdx = rgbToClusterIdx.get(key) || 0
-        const [cr, cg, cb] = centers[clusterIdx]
-        cell.r = cr
-        cell.g = cg
-        cell.b = cb
-        cell.hex = `#${cr.toString(16).padStart(2, '0')}${cg.toString(16).padStart(2, '0')}${cb.toString(16).padStart(2, '0')}`
+      // Replace pixels with cluster center colors
+      for (const cell of pixelCells) {
+        if (!cell.isTransparent) {
+          const key = `${cell.r},${cell.g},${cell.b}`
+          const clusterIdx = rgbToClusterIdx.get(key) || 0
+          const [cr, cg, cb] = centers[clusterIdx]
+          cell.r = cr
+          cell.g = cg
+          cell.b = cb
+          cell.hex = `#${cr.toString(16).padStart(2, '0')}${cg.toString(16).padStart(2, '0')}${cb.toString(16).padStart(2, '0')}`
+        }
       }
     }
   }

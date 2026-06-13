@@ -61,11 +61,12 @@ export const TRANSPARENT_COLOR: PaletteColor = {
 
 export type FitMode = 'contain' | 'cover' | 'stretch'
 
-export type PreviewTab = 'original' | 'pixel' | 'grid' | 'colorcode' | 'stats'
+export type PreviewTab = 'original' | 'pixel' | 'design' | 'grid' | 'colorcode' | 'stats'
 
 export const PREVIEW_TABS: { key: PreviewTab; label: string }[] = [
   { key: 'original', label: '原图' },
   { key: 'pixel', label: '像素图' },
+  { key: 'design', label: '设计稿' },
   { key: 'grid', label: '格子图' },
   { key: 'colorcode', label: '色号图' },
   { key: 'stats', label: '统计图' },

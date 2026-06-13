@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PatternData, PreviewTab } from '../../types/pattern'
+import type { PatternData, PreviewTab, PixelDesignGrid } from '../../types/pattern'
 import { PREVIEW_TABS } from '../../types/pattern'
 import {
   calcCellSize,
   drawPixelTab,
+  drawDesignTab,
   drawGridTab,
   drawColorCodeTab,
   drawStatsTab,
@@ -12,6 +13,7 @@ import {
 interface PreviewCanvasProps {
   imageUrl: string | null
   patternData: PatternData | null
+  pixelDesignGrid?: PixelDesignGrid | null
   width?: number
   height?: number
   mirror?: boolean
@@ -22,7 +24,7 @@ interface PreviewCanvasProps {
   canGenerate?: boolean
 }
 
-export function PreviewCanvas({ imageUrl, patternData, mirror = false, onEditClick, autoSelectPixelTab, onGenerate, isGenerating = false, canGenerate = false }: PreviewCanvasProps) {
+export function PreviewCanvas({ imageUrl, patternData, pixelDesignGrid, mirror = false, onEditClick, autoSelectPixelTab, onGenerate, isGenerating = false, canGenerate = false }: PreviewCanvasProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('original')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -83,6 +85,11 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false, onEditCli
       case 'pixel':
         drawPixelTab(ctx, rawPixels, size.width, size.height, cellSize, mirror, showWatermark)
         break
+      case 'design':
+        if (pixelDesignGrid) {
+          drawDesignTab(ctx, pixelDesignGrid.pixels, pixelDesignGrid.width, pixelDesignGrid.height, cellSize, mirror, showWatermark)
+        }
+        break
       case 'grid':
         drawGridTab(ctx, cells, size.width, size.height, cellSize, mirror, showWatermark)
         break
@@ -93,9 +100,9 @@ export function PreviewCanvas({ imageUrl, patternData, mirror = false, onEditCli
         drawStatsTab(ctx, colorStats, logicalW)
         break
     }
-  }, [activeTab, patternData, mirror])
+  }, [activeTab, patternData, pixelDesignGrid, mirror])
 
-  const isEmpty = activeTab === 'original' ? !imageUrl : !patternData
+  const isEmpty = activeTab === 'original' ? !imageUrl : activeTab === 'design' ? !pixelDesignGrid : !patternData
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -180,6 +187,7 @@ function EmptyHint({ text }: { text: string }) {
 
 function emptyHintText(tab: PreviewTab): string {
   if (tab === 'pixel') return '上传图片并点击"生成图纸"后显示像素图'
+  if (tab === 'design') return '高还原模式下生成图纸后显示设计稿'
   if (tab === 'grid') return '生成图纸后显示拼豆格子图'
   if (tab === 'colorcode') return '生成图纸后显示色号图'
   if (tab === 'stats') return '生成图纸后显示色彩统计'

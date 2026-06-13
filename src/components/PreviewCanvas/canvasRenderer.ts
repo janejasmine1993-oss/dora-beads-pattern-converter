@@ -45,6 +45,41 @@ export function drawPixelTab(
   drawWatermark(ctx, width * cellSize, height * cellSize, showWatermark)
 }
 
+export function drawDesignTab(
+  ctx: CanvasRenderingContext2D,
+  designPixels: PixelCell[],
+  width: number,
+  height: number,
+  cellSize: number,
+  mirror = false,
+  showWatermark = true
+): void {
+  fillTransparentBackground(ctx, width * cellSize, height * cellSize, cellSize)
+  ctx.imageSmoothingEnabled = false
+  for (const px of designPixels) {
+    if (px.isTransparent) continue
+    const drawX = mirror ? (width - 1 - px.x) : px.x
+    ctx.fillStyle = px.hex
+    ctx.fillRect(drawX * cellSize, px.y * cellSize, cellSize, cellSize)
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+  ctx.lineWidth = 0.5
+  for (let x = 0; x <= width; x++) {
+    ctx.beginPath()
+    ctx.moveTo(x * cellSize, 0)
+    ctx.lineTo(x * cellSize, height * cellSize)
+    ctx.stroke()
+  }
+  for (let y = 0; y <= height; y++) {
+    ctx.beginPath()
+    ctx.moveTo(0, y * cellSize)
+    ctx.lineTo(width * cellSize, y * cellSize)
+    ctx.stroke()
+  }
+  drawWatermark(ctx, width * cellSize, height * cellSize, showWatermark)
+}
+
 export function drawGridTab(
   ctx: CanvasRenderingContext2D,
   cells: PatternCell[],
