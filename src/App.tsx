@@ -1049,75 +1049,10 @@ function App() {
                   />
                 </div>
               </div>
-              <div className="bg-gray-50 rounded p-2 mb-2 text-xs text-gray-600">
-                <p>裁切尺寸: {cropRect.right - cropRect.left} × {cropRect.bottom - cropRect.top} 格</p>
-                <p>总格数: {(cropRect.right - cropRect.left) * (cropRect.bottom - cropRect.top)}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCropRect({left: 0, top: 0, right: patternData.size.width, bottom: patternData.size.height})}
-                  className="flex-1 px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
-                >
-                  重置裁切
-                </button>
-                <button
-                  onClick={() => {
-                    const croppedCells = patternData.cells.filter(c =>
-                      c.col >= cropRect.left && c.col < cropRect.right &&
-                      c.row >= cropRect.top && c.row < cropRect.bottom
-                    ).map(c => ({
-                      ...c,
-                      col: c.col - cropRect.left,
-                      row: c.row - cropRect.top
-                    }));
-                    const newWidth = cropRect.right - cropRect.left;
-                    const newHeight = cropRect.bottom - cropRect.top;
-
-                    // Crop rawPixels as well
-                    const croppedRawPixels = patternData.rawPixels.filter(px =>
-                      px.x >= cropRect.left && px.x < cropRect.right &&
-                      px.y >= cropRect.top && px.y < cropRect.bottom
-                    ).map(px => ({
-                      ...px,
-                      x: px.x - cropRect.left,
-                      y: px.y - cropRect.top
-                    }));
-
-                    const colorStats = computeColorStats(croppedCells);
-                    const beadCount = croppedCells.filter(c => !c.isTransparent).length;
-                    setPatternData({
-                      size: { width: newWidth, height: newHeight },
-                      cells: croppedCells,
-                      rawPixels: croppedRawPixels,
-                      colorStats,
-                      beadCount,
-                      transparentCount: croppedCells.filter(c => c.isTransparent).length
-                    });
-
-                    // Crop pixelDesignGrid if it exists
-                    if (pixelDesignGrid) {
-                      const croppedGridPixels = pixelDesignGrid.pixels.filter(px =>
-                        px.x >= cropRect.left && px.x < cropRect.right &&
-                        px.y >= cropRect.top && px.y < cropRect.bottom
-                      ).map(px => ({
-                        ...px,
-                        x: px.x - cropRect.left,
-                        y: px.y - cropRect.top
-                      }));
-                      setPixelDesignGrid({
-                        width: newWidth,
-                        height: newHeight,
-                        pixels: croppedGridPixels,
-                        metadata: pixelDesignGrid.metadata
-                      });
-                    }
-
-                    setCropRect(null);
-                  }}
-                  className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                >
-                  应用裁切
-                </button>
+              <div className="bg-blue-50 rounded p-2 text-xs text-blue-700 border border-blue-200">
+                <p className="mb-1">裁切尺寸: {cropRect.right - cropRect.left} × {cropRect.bottom - cropRect.top} 格</p>
+                <p className="text-xs text-blue-600">总格数: {(cropRect.right - cropRect.left) * (cropRect.bottom - cropRect.top)}</p>
+                <p className="mt-2 text-xs">💡 拖动画布上的蓝色裁切框调整，或上方操作条点击「应用裁切」确认。</p>
               </div>
             </div>
           )}
@@ -1186,26 +1121,111 @@ function App() {
         <main className="flex-1 overflow-hidden p-4 flex flex-col">
           <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col min-h-0 relative">
             {editMode && patternData && (
-              <EditorToolbar
-                activeTool={activeTool}
-                onToolChange={setActiveTool}
-                activeColor={activeColor}
-                highlightColorCode={highlightColorCode}
-                fillThreshold={fillThreshold}
-                onFillThresholdChange={setFillThreshold}
-                canUndo={cellHistory ? canUndo(cellHistory) : false}
-                canRedo={cellHistory ? canRedo(cellHistory) : false}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                hasSelection={!!selection}
-                onClearSelection={() => setSelection(null)}
-                onInvertSelection={handleInvertSelection}
-                onHighlightActiveColor={handleHighlightActiveColor}
-                onStartReplaceActiveColor={handleStartReplaceActiveColor}
-                onDeleteActiveColor={handleDeleteActiveColor}
-                showCellCodes={showCellCodes}
-                onToggleCellCodes={() => setShowCellCodes(v => !v)}
-              />
+              <>
+                <EditorToolbar
+                  activeTool={activeTool}
+                  onToolChange={setActiveTool}
+                  activeColor={activeColor}
+                  highlightColorCode={highlightColorCode}
+                  fillThreshold={fillThreshold}
+                  onFillThresholdChange={setFillThreshold}
+                  canUndo={cellHistory ? canUndo(cellHistory) : false}
+                  canRedo={cellHistory ? canRedo(cellHistory) : false}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  hasSelection={!!selection}
+                  onClearSelection={() => setSelection(null)}
+                  onInvertSelection={handleInvertSelection}
+                  onHighlightActiveColor={handleHighlightActiveColor}
+                  onStartReplaceActiveColor={handleStartReplaceActiveColor}
+                  onDeleteActiveColor={handleDeleteActiveColor}
+                  showCellCodes={showCellCodes}
+                  onToggleCellCodes={() => setShowCellCodes(v => !v)}
+                />
+
+                {/* Crop action bar */}
+                {cropRect && (
+                  <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium text-gray-700">
+                        图纸裁切: {cropRect.right - cropRect.left} × {cropRect.bottom - cropRect.top} 格
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCropRect({left: 0, top: 0, right: patternData.size.width, bottom: patternData.size.height})}
+                        className="px-3 py-1.5 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        重置裁切
+                      </button>
+                      <button
+                        onClick={() => {
+                          const croppedCells = patternData.cells.filter(c =>
+                            c.col >= cropRect.left && c.col < cropRect.right &&
+                            c.row >= cropRect.top && c.row < cropRect.bottom
+                          ).map(c => ({
+                            ...c,
+                            col: c.col - cropRect.left,
+                            row: c.row - cropRect.top
+                          }));
+                          const newWidth = cropRect.right - cropRect.left;
+                          const newHeight = cropRect.bottom - cropRect.top;
+
+                          const croppedRawPixels = patternData.rawPixels.filter(px =>
+                            px.x >= cropRect.left && px.x < cropRect.right &&
+                            px.y >= cropRect.top && px.y < cropRect.bottom
+                          ).map(px => ({
+                            ...px,
+                            x: px.x - cropRect.left,
+                            y: px.y - cropRect.top
+                          }));
+
+                          const colorStats = computeColorStats(croppedCells);
+                          const beadCount = croppedCells.filter(c => !c.isTransparent).length;
+                          setPatternData({
+                            size: { width: newWidth, height: newHeight },
+                            cells: croppedCells,
+                            rawPixels: croppedRawPixels,
+                            colorStats,
+                            beadCount,
+                            transparentCount: croppedCells.filter(c => c.isTransparent).length
+                          });
+
+                          if (pixelDesignGrid) {
+                            const croppedGridPixels = pixelDesignGrid.pixels.filter(px =>
+                              px.x >= cropRect.left && px.x < cropRect.right &&
+                              px.y >= cropRect.top && px.y < cropRect.bottom
+                            ).map(px => ({
+                              ...px,
+                              x: px.x - cropRect.left,
+                              y: px.y - cropRect.top
+                            }));
+                            setPixelDesignGrid({
+                              width: newWidth,
+                              height: newHeight,
+                              pixels: croppedGridPixels,
+                              metadata: pixelDesignGrid.metadata
+                            });
+                          }
+
+                          setCropRect(null);
+                          // Show feedback
+                          setErrorMsg(null);
+                          setTimeout(() => {
+                            // Use a toast-like notification (reuse errorMsg area)
+                            const feedback = `✓ 已应用裁切：${newWidth} × ${newHeight} 格`;
+                            setErrorMsg(feedback);
+                            setTimeout(() => setErrorMsg(null), 3000);
+                          }, 100);
+                        }}
+                        className="px-3 py-1.5 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium"
+                      >
+                        应用裁切
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             <div className="flex-1 min-h-0 p-4 flex flex-col relative">
               {editMode && patternData ? (

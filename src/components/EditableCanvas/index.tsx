@@ -5,6 +5,7 @@ import type { EditorTool, SelectionRect } from '../../lib/editor/types'
 import { TOOL_CURSORS } from '../../lib/editor/types'
 import { paintCell, eraseCell } from '../../lib/editor/operations'
 import { floodFill } from '../../lib/editor/floodFill'
+import { CropFrameOverlay } from './CropFrameOverlay'
 
 const FF_MONO = 'Consolas, Menlo, Monaco, "Courier New", monospace'
 
@@ -38,15 +39,11 @@ export function EditableCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hoverCell, setHoverCell] = useState<{ r: number; c: number } | null>(null)
-  const [hoveredCropEdge, setHoveredCropEdge] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null)
   const isPainting = useRef(false)
   const isSelecting = useRef(false)
   const selStart = useRef<{ r: number; c: number } | null>(null)
   // Pan state: tracks mouse start pos + container scroll start
   const panStart = useRef<{ mx: number; my: number; sl: number; st: number } | null>(null)
-  // Crop drag state: which edge is being dragged
-  const cropDragEdge = useRef<'left' | 'right' | 'top' | 'bottom' | null>(null)
-  const cropDragStart = useRef<{ x: number; y: number; rect: { left: number; top: number; right: number; bottom: number } } | null>(null)
 
   const { size: { width, height }, cells } = patternData
   const CS = Math.round(calcBaseCS(width, height) * zoom)
@@ -159,43 +156,7 @@ export function EditableCanvas({
       ctx.lineWidth = 2
       ctx.strokeRect(hoverCell.c * CS + 1, hoverCell.r * CS + 1, CS - 2, CS - 2)
     }
-
-    // 9. Crop overlay
-    if (cropRect) {
-      const cx = cropRect.left * CS
-      const cy = cropRect.top * CS
-      const cw = (cropRect.right - cropRect.left) * CS
-      const ch = (cropRect.bottom - cropRect.top) * CS
-
-      // Overlay outside crop area with semi-transparent black
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'
-      // Left
-      if (cropRect.left > 0) ctx.fillRect(0, 0, cx, logH)
-      // Right
-      if (cropRect.right < width) ctx.fillRect(cx + cw, 0, logW - (cx + cw), logH)
-      // Top
-      if (cropRect.top > 0) ctx.fillRect(cx, 0, cw, cy)
-      // Bottom
-      if (cropRect.bottom < height) ctx.fillRect(cx, cy + ch, cw, logH - (cy + ch))
-
-      // Crop frame border
-      ctx.strokeStyle = '#f59e0b'
-      ctx.lineWidth = 2
-      ctx.strokeRect(cx, cy, cw, ch)
-
-      // Draw resize handles on edges
-      const handleSize = 8
-      ctx.fillStyle = '#f59e0b'
-      // Left edge handle
-      ctx.fillRect(cx - handleSize / 2, cy + ch / 2 - handleSize / 2, handleSize, handleSize)
-      // Right edge handle
-      ctx.fillRect(cx + cw - handleSize / 2, cy + ch / 2 - handleSize / 2, handleSize, handleSize)
-      // Top edge handle
-      ctx.fillRect(cx + cw / 2 - handleSize / 2, cy - handleSize / 2, handleSize, handleSize)
-      // Bottom edge handle
-      ctx.fillRect(cx + cw / 2 - handleSize / 2, cy + ch - handleSize / 2, handleSize, handleSize)
-    }
-  }, [cells, width, height, CS, mirror, highlightColorCode, selection, hoverCell, showCellCodes, cropRect])
+  }, [cells, width, height, CS, mirror, highlightColorCode, selection, hoverCell, showCellCodes])
 
   function cellFromMouse(e: React.MouseEvent<HTMLCanvasElement>) {
     const rect = canvasRef.current!.getBoundingClientRect()
@@ -205,33 +166,6 @@ export function EditableCanvas({
       r: Math.max(0, Math.min(height - 1, row)),
       c: Math.max(0, Math.min(width - 1, col)),
     }
-  }
-
-  function getMouseGridCoords(e: React.MouseEvent<HTMLCanvasElement>) {
-    const rect = canvasRef.current!.getBoundingClientRect()
-    const col = (e.clientX - rect.left) / CS
-    const row = (e.clientY - rect.top) / CS
-    return { col, row }
-  }
-
-  function detectCropEdge(e: React.MouseEvent<HTMLCanvasElement>): 'left' | 'right' | 'top' | 'bottom' | null {
-    if (!cropRect) return null
-    const { col, row } = getMouseGridCoords(e)
-    const handleThreshold = 0.3
-
-    const isNearLeft = Math.abs(col - cropRect.left) < handleThreshold
-    const isNearRight = Math.abs(col - cropRect.right) < handleThreshold
-    const isNearTop = Math.abs(row - cropRect.top) < handleThreshold
-    const isNearBottom = Math.abs(row - cropRect.bottom) < handleThreshold
-
-    const isInCropV = row >= cropRect.top && row <= cropRect.bottom
-    const isInCropH = col >= cropRect.left && col <= cropRect.right
-
-    if (isNearLeft && isInCropV) return 'left'
-    if (isNearRight && isInCropV) return 'right'
-    if (isNearTop && isInCropH) return 'top'
-    if (isNearBottom && isInCropH) return 'bottom'
-    return null
   }
 
   function inSelection(row: number, col: number): boolean {
@@ -281,16 +215,6 @@ export function EditableCanvas({
       return
     }
 
-    // Detect crop edge drag
-    if (cropRect && onCropRectChange) {
-      const edge = detectCropEdge(e)
-      if (edge) {
-        cropDragEdge.current = edge
-        cropDragStart.current = { x: e.clientX, y: e.clientY, rect: { ...cropRect } }
-        return
-      }
-    }
-
     const { r, c } = cellFromMouse(e)
     if (activeTool === 'select') {
       isSelecting.current = true
@@ -315,38 +239,8 @@ export function EditableCanvas({
       return
     }
 
-    // Crop edge drag
-    if (cropDragEdge.current && cropDragStart.current && onCropRectChange) {
-      const { col, row } = getMouseGridCoords(e)
-      const startRect = cropDragStart.current.rect
-      const edge = cropDragEdge.current
-      const newRect = { ...startRect }
-
-      const snappedCol = Math.round(col)
-      const snappedRow = Math.round(row)
-
-      if (edge === 'left') {
-        newRect.left = Math.max(0, Math.min(snappedCol, newRect.right - 1))
-      } else if (edge === 'right') {
-        newRect.right = Math.min(width, Math.max(snappedCol, newRect.left + 1))
-      } else if (edge === 'top') {
-        newRect.top = Math.max(0, Math.min(snappedRow, newRect.bottom - 1))
-      } else if (edge === 'bottom') {
-        newRect.bottom = Math.min(height, Math.max(snappedRow, newRect.top + 1))
-      }
-
-      onCropRectChange(newRect)
-      return
-    }
-
     const { r, c } = cellFromMouse(e)
     setHoverCell({ r, c })
-
-    // Update hovered crop edge for cursor
-    if (cropRect && !cropDragEdge.current) {
-      const edge = detectCropEdge(e)
-      setHoveredCropEdge(edge)
-    }
 
     if (isSelecting.current && selStart.current) {
       const s = selStart.current
@@ -367,43 +261,44 @@ export function EditableCanvas({
     isPainting.current = false
     isSelecting.current = false
     selStart.current = null
-    cropDragEdge.current = null
-    cropDragStart.current = null
-    if (canvasRef.current) {
-      canvasRef.current.style.cursor = spacePanning ? 'grab' : TOOL_CURSORS[activeTool]
-    }
   }
 
-  let cursor = TOOL_CURSORS[activeTool]
-  if (spacePanning) {
-    cursor = panStart.current ? 'grabbing' : 'grab'
-  } else if (cropDragEdge.current) {
-    cursor = (cropDragEdge.current === 'left' || cropDragEdge.current === 'right') ? 'ew-resize' : 'ns-resize'
-  } else if (hoveredCropEdge) {
-    cursor = (hoveredCropEdge === 'left' || hoveredCropEdge === 'right') ? 'ew-resize' : 'ns-resize'
-  }
+  const cursor = spacePanning
+    ? (panStart.current ? 'grabbing' : 'grab')
+    : TOOL_CURSORS[activeTool]
 
   return (
-    <div ref={containerRef} className="overflow-auto flex-1 bg-gray-100 p-2 rounded-lg" style={{ minHeight: 0 }}>
-      <canvas
-        ref={canvasRef}
-        style={{
-          imageRendering: 'pixelated',
-          cursor,
-          display: 'block',
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          setHoverCell(null)
-          setHoveredCropEdge(null)
-          isPainting.current = false
-          isSelecting.current = false
-          cropDragEdge.current = null
-          cropDragStart.current = null
-        }}
-      />
+    <div ref={containerRef} className="overflow-auto flex-1 bg-gray-100 p-2 rounded-lg relative" style={{ minHeight: 0 }}>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <canvas
+          ref={canvasRef}
+          style={{
+            imageRendering: 'pixelated',
+            cursor,
+            display: 'block',
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => {
+            setHoverCell(null)
+            isPainting.current = false
+            isSelecting.current = false
+          }}
+        />
+        {cropRect && onCropRectChange && containerRef.current && (
+          <CropFrameOverlay
+            cropRect={cropRect}
+            onCropRectChange={onCropRectChange}
+            canvasWidth={width * CS}
+            canvasHeight={height * CS}
+            cellSize={CS}
+            containerElement={containerRef.current}
+            patternWidth={width}
+            patternHeight={height}
+          />
+        )}
+      </div>
     </div>
   )
 }
